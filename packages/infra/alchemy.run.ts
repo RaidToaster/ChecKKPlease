@@ -5,7 +5,7 @@ import { config } from "dotenv";
 config({ path: "./.env" });
 config({ path: "../../apps/web/.env" });
 
-const app = await alchemy("my-better-t-app");
+const app = await alchemy("ChecKKPlease");
 
 export const web = await Nextjs("web", {
   cwd: "../../apps/web",

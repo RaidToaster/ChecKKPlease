@@ -1,4 +1,4 @@
-import { createAuth } from "@my-better-t-app/auth";
+import { createAuth } from "@ChecKKPlease/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
 export async function GET(request: Request) {

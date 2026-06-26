@@ -12,8 +12,8 @@
 {
   "$schema": "https://r2.better-t-stack.dev/schema.json",
   "version": "3.34.0",
-  "createdAt": "2026-06-26T05:28:19.556Z",
-  "reproducibleCommand": "bun create better-t-stack@latest my-better-t-app --frontend next --backend self --runtime none --database mongodb --orm mongoose --api trpc --auth better-auth --payments none --addons oxlint turborepo --examples none --db-setup mongodb-atlas --web-deploy cloudflare --server-deploy none --no-git --package-manager bun --install",
+  "createdAt": "2026-06-26T05:45:42.043Z",
+  "reproducibleCommand": "bun create better-t-stack@latest ChecKKPlease --frontend next --backend self --runtime none --database mongodb --orm mongoose --api trpc --auth better-auth --payments none --addons oxlint turborepo --examples none --db-setup mongodb-atlas --web-deploy cloudflare --server-deploy none --no-git --package-manager bun --install",
   "database": "mongodb",
   "orm": "mongoose",
   "backend": "self",

@@ -1,5 +1,5 @@
 {
-  "name": "@my-better-t-app/auth",
+  "name": "@ChecKKPlease/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -11,15 +11,15 @@
   },
   "scripts": {},
   "dependencies": {
-    "@my-better-t-app/db": "workspace:*",
-    "@my-better-t-app/env": "workspace:*",
+    "@ChecKKPlease/db": "workspace:*",
+    "@ChecKKPlease/env": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "mongodb": "^7.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@my-better-t-app/config": "workspace:*",
+    "@ChecKKPlease/config": "workspace:*",
     "typescript": "catalog:"
   }
 }

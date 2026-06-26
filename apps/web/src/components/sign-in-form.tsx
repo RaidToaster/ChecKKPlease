@@ -1,6 +1,6 @@
-import { Button } from "@my-better-t-app/ui/components/button";
-import { Input } from "@my-better-t-app/ui/components/input";
-import { Label } from "@my-better-t-app/ui/components/label";
+import { Button } from "@ChecKKPlease/ui/components/button";
+import { Input } from "@ChecKKPlease/ui/components/input";
+import { Label } from "@ChecKKPlease/ui/components/label";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";

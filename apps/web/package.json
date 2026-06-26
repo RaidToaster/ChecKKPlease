@@ -8,10 +8,10 @@
     "dev:bare": "next dev --port 3001"
   },
   "dependencies": {
-    "@my-better-t-app/api": "workspace:*",
-    "@my-better-t-app/auth": "workspace:*",
-    "@my-better-t-app/env": "workspace:*",
-    "@my-better-t-app/ui": "workspace:*",
+    "@ChecKKPlease/api": "workspace:*",
+    "@ChecKKPlease/auth": "workspace:*",
+    "@ChecKKPlease/env": "workspace:*",
+    "@ChecKKPlease/ui": "workspace:*",
     "@opennextjs/cloudflare": "catalog:",
     "@tanstack/react-form": "^1.28.0",
     "@tanstack/react-query": "^5.90.12",
@@ -30,8 +30,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@ChecKKPlease/config": "workspace:*",
     "@cloudflare/workers-types": "catalog:",
-    "@my-better-t-app/config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@types/node": "^20",

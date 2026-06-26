@@ -1,4 +1,4 @@
-import { createAuth } from "@my-better-t-app/auth";
+import { createAuth } from "@ChecKKPlease/auth";
 import type { NextRequest } from "next/server";
 
 export async function createContext(req: NextRequest) {

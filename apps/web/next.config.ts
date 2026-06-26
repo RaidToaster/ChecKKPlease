@@ -1,4 +1,4 @@
-import "@my-better-t-app/env/web";
+import "@ChecKKPlease/env/web";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
 

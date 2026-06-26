@@ -1,4 +1,4 @@
-import { createAuth } from "@my-better-t-app/auth";
+import { createAuth } from "@ChecKKPlease/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 

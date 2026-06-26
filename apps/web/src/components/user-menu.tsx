@@ -1,4 +1,4 @@
-import { Button } from "@my-better-t-app/ui/components/button";
+import { Button } from "@ChecKKPlease/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,8 +7,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@my-better-t-app/ui/components/dropdown-menu";
-import { Skeleton } from "@my-better-t-app/ui/components/skeleton";
+} from "@ChecKKPlease/ui/components/dropdown-menu";
+import { Skeleton } from "@ChecKKPlease/ui/components/skeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

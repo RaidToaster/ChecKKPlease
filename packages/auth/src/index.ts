@@ -1,5 +1,5 @@
-import { client } from "@my-better-t-app/db";
-import { env } from "@my-better-t-app/env/server";
+import { client } from "@ChecKKPlease/db";
+import { env } from "@ChecKKPlease/env/server";
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { nextCookies } from "better-auth/next-js";

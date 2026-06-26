@@ -1,5 +1,5 @@
 {
-  "name": "my-better-t-app",
+  "name": "ChecKKPlease",
   "private": true,
   "workspaces": {
     "packages": [
@@ -33,18 +33,18 @@
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:web": "turbo -F web dev",
-    "deploy": "turbo -F @my-better-t-app/infra deploy",
-    "destroy": "turbo -F @my-better-t-app/infra destroy",
+    "deploy": "turbo -F @ChecKKPlease/infra deploy",
+    "destroy": "turbo -F @ChecKKPlease/infra destroy",
     "check": "oxlint && oxfmt --write"
   },
   "dependencies": {
-    "@my-better-t-app/env": "workspace:*",
+    "@ChecKKPlease/env": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@ChecKKPlease/config": "workspace:*",
     "@cloudflare/workers-types": "catalog:",
-    "@my-better-t-app/config": "workspace:*",
     "@types/node": "^22.13.14",
     "oxfmt": "^0.53.0",
     "oxlint": "^1.68.0",
