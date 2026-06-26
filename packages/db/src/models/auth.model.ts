@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const { Schema, model } = mongoose;
+const { Schema, model, models } = mongoose;
 const { ObjectId } = Schema.Types;
 
 const userSchema = new Schema(
@@ -64,9 +64,9 @@ const verificationSchema = new Schema(
 );
 verificationSchema.index({ identifier: 1 });
 
-const User = model("User", userSchema);
-const Session = model("Session", sessionSchema);
-const Account = model("Account", accountSchema);
-const Verification = model("Verification", verificationSchema);
+const User = models.User || model("User", userSchema);
+const Session = models.Session || model("Session", sessionSchema);
+const Account = models.Account || model("Account", accountSchema);
+const Verification = models.Verification || model("Verification", verificationSchema);
 
 export { User, Session, Account, Verification };

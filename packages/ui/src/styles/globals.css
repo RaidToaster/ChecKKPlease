@@ -42,41 +42,75 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0a0a0f;
+  --foreground: #ffffff;
+  --card: #14141e;
+  --card-foreground: #e8e8f0;
+  --popover: #14141e;
+  --popover-foreground: #e8e8f0;
+  --primary: #00f0ff;
+  --primary-foreground: #0a0a0f;
+  --secondary: #1e1e30;
+  --secondary-foreground: #e8e8f0;
+  --muted: #1e1e30;
+  --muted-foreground: #8080b0;
+  --accent: #ff00aa;
+  --accent-foreground: #0a0a0f;
+  --destructive: #ff2255;
+  --border: #00f0ff44;
+  --input: #00f0ff44;
+  --ring: #00f0ff;
+  --chart-1: #00f0ff;
+  --chart-2: #ff00aa;
+  --chart-3: #00ff41;
+  --chart-4: #ff8800;
+  --chart-5: #8800ff;
+  --sidebar: #14141e;
+  --sidebar-foreground: #e8e8f0;
+  --sidebar-primary: #00f0ff;
+  --sidebar-primary-foreground: #0a0a0f;
+  --sidebar-accent: #ff00aa;
+  --sidebar-accent-foreground: #0a0a0f;
+  --sidebar-border: #00f0ff44;
+  --sidebar-ring: #00f0ff;
+}
+
+@keyframes glitch {
+  0% { text-shadow: 0.03em 0 0 #00f0ffaa, -0.03em -0.02em 0 #ff00aaaa; }
+  9% { text-shadow: 0.03em 0 0 #00f0ffaa, -0.03em -0.02em 0 #ff00aaaa; }
+  10% { text-shadow: -0.03em -0.02em 0 #00f0ffaa, 0.02em 0.02em 0 #ff00aaaa; }
+  19% { text-shadow: -0.03em -0.02em 0 #00f0ffaa, 0.02em 0.02em 0 #ff00aaaa; }
+  20% { text-shadow: 0.02em 0.04em 0 #00f0ffaa, 0.03em 0 0 #ff00aaaa; }
+  29% { text-shadow: 0.02em 0.04em 0 #00f0ffaa, 0.03em 0 0 #ff00aaaa; }
+  30% { text-shadow: -0.02em -0.03em 0 #00f0ffaa, 0.03em 0.02em 0 #ff00aaaa; }
+  39% { text-shadow: -0.02em -0.03em 0 #00f0ffaa, 0.03em 0.02em 0 #ff00aaaa; }
+  40% { text-shadow: 0.03em 0 0 #00f0ffaa, -0.03em -0.02em 0 #ff00aaaa; }
+  100% { text-shadow: 0.03em 0 0 #00f0ffaa, -0.03em -0.02em 0 #ff00aaaa; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100dvh); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px #00f0ff66, inset 0 0 4px #00f0ff22; }
+  50% { box-shadow: 0 0 12px #00f0ffaa, inset 0 0 8px #00f0ff44; }
+}
+
+@keyframes data-stream {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
 }
 
 @theme inline {
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: "JetBrains Mono", "Fira Code", monospace;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --color-neon-cyan: #00f0ff;
+  --color-neon-magenta: #ff00aa;
+  --color-neon-green: #00ff41;
+  --color-neon-green-dim: #00cc33;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -127,4 +161,36 @@
   html {
     @apply font-sans;
   }
+}
+
+.glitched {
+  animation: glitch 4s infinite;
+}
+
+.scanline::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f0ff33, transparent);
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.data-line {
+  @apply relative overflow-hidden;
+}
+
+.data-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  animation: data-stream 3s ease-in-out infinite;
 }
