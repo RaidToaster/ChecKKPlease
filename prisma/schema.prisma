@@ -11,8 +11,29 @@ generator client {
 // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
+}
+
+
+model Debt{
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  paidBy    String
+  items     Item[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  version   Int      @map("__v")
+
+  @@map("debts")
+}
+
+type Item {
+  id        String   @map("_id") @db.ObjectId
+  name      String
+  price     Int
+  owner     String
+  paid     Boolean
 }
 
 model Post {
@@ -28,7 +49,7 @@ model Post {
 }
 
 model User {
-  id            String    @id
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String //@db.Text
   email         String
   emailVerified Boolean   @default(false)
