@@ -1,16 +1,13 @@
+import { MongoClient } from "mongodb";
+
 import { env } from "~/env";
-import { PrismaClient } from "../../generated/prisma";
 
-const createPrismaClient = () =>
-  new PrismaClient({
-    log:
-      env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: ReturnType<typeof createPrismaClient> | undefined;
+const globalForMongo = globalThis as unknown as {
+  client: MongoClient | undefined;
 };
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
+const client = globalForMongo.client ?? new MongoClient(env.DATABASE_URL);
+if (env.NODE_ENV !== "production") globalForMongo.client = client;
 
-if (env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+export const mongo = client.db();
+export { client as mongoClient };

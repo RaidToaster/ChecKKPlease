@@ -11,8 +11,9 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+import { env } from "~/env";
 import { auth } from "~/server/better-auth";
-import { db } from "~/server/db";
+import { mongo } from "~/server/db";
 
 /**
  * 1. CONTEXT
@@ -31,7 +32,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     headers: opts.headers,
   });
   return {
-    db,
+    mongo,
     session,
     ...opts,
   };
@@ -128,6 +129,22 @@ export const protectedProcedure = t.procedure
     return next({
       ctx: {
         // infers the `session` as non-nullable
+        session: { ...ctx.session, user: ctx.session.user },
+      },
+    });
+  });
+
+export const adminProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (ctx.session.user.email !== env.ADMIN_EMAIL) {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+    return next({
+      ctx: {
         session: { ...ctx.session, user: ctx.session.user },
       },
     });

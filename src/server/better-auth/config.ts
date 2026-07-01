@@ -1,15 +1,15 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { mongodbAdapter } from "better-auth/adapters/mongodb";
 
 import { env } from "~/env";
-import { db } from "~/server/db";
+import { mongo } from "~/server/db";
+import { ensureAdmin } from "~/server/db/seed";
 
 export const auth = betterAuth({
-  database: prismaAdapter(db, {
-    provider: "postgresql", // or "sqlite" or "mysql"
-  }),
+  database: mongodbAdapter(mongo),
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
   },
   socialProviders: {
     github: {
@@ -19,5 +19,7 @@ export const auth = betterAuth({
     },
   },
 });
+
+ensureAdmin();
 
 export type Session = typeof auth.$Infer.Session;
