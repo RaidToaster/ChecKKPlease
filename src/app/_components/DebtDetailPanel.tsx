@@ -29,6 +29,7 @@ export function DebtDetailPanel({
   onDebtUpdated,
 }: DebtDetailPanelProps) {
   const [editMode, setEditMode] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: debt } = api.debt.getDebtById.useQuery(
     { _id: debtId ?? "" },
@@ -60,6 +61,7 @@ export function DebtDetailPanel({
   // Reset edit mode when panel opens/closes or debt changes
   useEffect(() => {
     setEditMode(false);
+    setConfirmDelete(false);
   }, [isOpen, debtId]);
 
   const formatCurrency = (n: number) => {
@@ -70,8 +72,7 @@ export function DebtDetailPanel({
     }).format(n);
   };
 
-  const total =
-    debt?.items?.reduce((sum, item) => sum + item.price, 0) ?? 0;
+  const total = debt?.items?.reduce((sum, item) => sum + item.price, 0) ?? 0;
   const paidTotal =
     debt?.items
       ?.filter((item) => item.paid)
@@ -101,11 +102,11 @@ export function DebtDetailPanel({
                 ? "New Debt"
                 : editMode
                   ? "Edit Debt"
-                  : debt?.title ?? "Debt Detail"}
+                  : (debt?.title ?? "Debt Detail")}
             </h2>
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-black/60 transition hover:bg-black/5 hover:text-black cursor-pointer"
+              className="cursor-pointer rounded-lg p-2 text-black/60 transition hover:bg-black/5 hover:text-black"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -160,7 +161,7 @@ export function DebtDetailPanel({
 
                 {/* Items */}
                 <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-medium uppercase tracking-wider text-black/40">
+                  <h3 className="text-sm font-medium tracking-wider text-black/40 uppercase">
                     Items
                   </h3>
                   {debt.items && debt.items.length > 0 ? (
@@ -249,18 +250,45 @@ export function DebtDetailPanel({
                   >
                     Edit Debt
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (debtId) {
-                        deleteMutation.mutate({ _id: debtId });
-                      }
-                    }}
-                    disabled={deleteMutation.isPending}
-                    className="h-11 w-full rounded-lg border-black/10 text-sm hover:border-black hover:bg-black hover:text-white"
-                  >
-                    {deleteMutation.isPending ? "Deleting..." : "Delete Debt"}
-                  </Button>
+                  {confirmDelete ? (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm text-black/60">
+                        Are you sure you want to delete this debt?
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setConfirmDelete(false)}
+                          disabled={deleteMutation.isPending}
+                          className="h-9 flex-1 rounded-lg border-black/10 text-sm hover:border-black"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            if (debtId) {
+                              deleteMutation.mutate({ _id: debtId });
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="h-9 flex-1 rounded-lg border-red-600 text-sm hover:bg-red-600 hover:text-white"
+                        >
+                          {deleteMutation.isPending
+                            ? "Deleting..."
+                            : "Yes, delete"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      onClick={() => setConfirmDelete(true)}
+                      className="h-11 w-full rounded-lg border-black/10 text-sm hover:border-red-600 hover:bg-red-600 hover:text-white"
+                    >
+                      Delete Debt
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
