@@ -24,9 +24,15 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
   }, [debt.items]);
 
   const ownerTotals = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { total: number; allPaid: boolean }>();
     for (const item of debt.items) {
-      map.set(item.owner, (map.get(item.owner) ?? 0) + item.price);
+      const existing = map.get(item.owner);
+      if (existing) {
+        existing.total += item.price;
+        if (!item.paid) existing.allPaid = false;
+      } else {
+        map.set(item.owner, { total: item.price, allPaid: item.paid });
+      }
     }
     return Array.from(map.entries());
   }, [debt.items]);
@@ -59,9 +65,12 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
       {/* Owner breakdown */}
       {ownerTotals.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {ownerTotals.map(([owner, amount]) => (
-            <span key={owner} className="text-xs text-black/50">
-              {owner}: {formatCurrency(amount)}
+          {ownerTotals.map(([owner, { total, allPaid }]) => (
+            <span
+              key={owner}
+              className={`text-xs ${allPaid ? "text-black/30 line-through" : "text-black/50"}`}
+            >
+              {owner}: {formatCurrency(total)}
             </span>
           ))}
         </div>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
 
 interface AddDebtFormProps {
@@ -12,6 +13,7 @@ interface AddDebtFormProps {
 }
 
 export function AddDebtForm({ onSuccess }: AddDebtFormProps) {
+  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [paidBy, setPaidBy] = useState("");
   const [items, setItems] = useState<
@@ -20,6 +22,9 @@ export function AddDebtForm({ onSuccess }: AddDebtFormProps) {
 
   const createMutation = api.debt.createDebt.useMutation({
     onSuccess,
+    onError: (error) => {
+      toast(error.message, "destructive");
+    },
   });
 
   const handleAddItem = () => {

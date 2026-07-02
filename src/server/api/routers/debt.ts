@@ -164,9 +164,10 @@ export const debtRouter = createTRPCRouter({
   updateDebt: protectedProcedure
     .input(UpdateDebtInput)
     .mutation(async ({ ctx, input }) => {
+      const { _id, ...updateData } = input;
       const res = await ctx.mongo.collection("debts").updateOne(
         { _id: new ObjectId(input._id) },
-        { $set: { ...input, updatedAt: new Date() } },
+        { $set: { ...updateData, updatedAt: new Date() } },
       );
       return res;
     }),

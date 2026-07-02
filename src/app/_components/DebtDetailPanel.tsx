@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
+import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
 import { AddDebtForm } from "./AddDebtForm";
 import { EditDebtForm } from "./EditDebtForm";
@@ -28,6 +29,7 @@ export function DebtDetailPanel({
   onItemPaid,
   onDebtUpdated,
 }: DebtDetailPanelProps) {
+  const { toast } = useToast();
   const [editMode, setEditMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -38,14 +40,23 @@ export function DebtDetailPanel({
 
   const deleteMutation = api.debt.deleteDebt.useMutation({
     onSuccess: onDebtDeleted,
+    onError: (error) => {
+      toast(error.message, "destructive");
+    },
   });
 
   const markPaidMutation = api.debt.markItemAsPaid.useMutation({
     onSuccess: onItemPaid,
+    onError: (error) => {
+      toast(error.message, "destructive");
+    },
   });
 
   const markUnpaidMutation = api.debt.markItemAsUnpaid.useMutation({
     onSuccess: onItemPaid,
+    onError: (error) => {
+      toast(error.message, "destructive");
+    },
   });
 
   useEffect(() => {

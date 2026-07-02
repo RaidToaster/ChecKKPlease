@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
 
 interface EditDebtFormProps {
@@ -25,6 +26,7 @@ interface EditDebtFormProps {
 }
 
 export function EditDebtForm({ debt, onSuccess, onCancel }: EditDebtFormProps) {
+  const { toast } = useToast();
   const [title, setTitle] = useState(debt.title);
   const [paidBy, setPaidBy] = useState(debt.paidBy);
   const [items, setItems] = useState<
@@ -41,6 +43,9 @@ export function EditDebtForm({ debt, onSuccess, onCancel }: EditDebtFormProps) {
 
   const updateMutation = api.debt.updateDebt.useMutation({
     onSuccess,
+    onError: (error) => {
+      toast(error.message, "destructive");
+    },
   });
 
   const handleAddItem = () => {
