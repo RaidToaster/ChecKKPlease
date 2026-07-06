@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
-import { AddDebtForm } from "./AddDebtForm";
-import { EditDebtForm } from "./EditDebtForm";
+import { DebtForm } from "./DebtForm";
 
 interface DebtDetailPanelProps {
   isOpen: boolean;
@@ -139,10 +138,10 @@ export function DebtDetailPanel({
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-8">
             {mode === "create" ? (
-              <AddDebtForm onSuccess={onDebtCreated} />
+              <DebtForm onSuccess={onDebtCreated} />
             ) : debt && editMode ? (
-              <EditDebtForm
-                debt={debt}
+              <DebtForm
+                initialValues={debt}
                 onSuccess={() => {
                   setEditMode(false);
                   onDebtUpdated();

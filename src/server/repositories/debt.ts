@@ -28,7 +28,7 @@ export interface UpdateDebtData {
   title: string;
   paidBy: string;
   items: Array<{
-    _id: string;
+    _id?: string;
     name: string;
     price: number;
     owner: string;
@@ -153,7 +153,10 @@ export class MongoDebtRepository implements DebtRepository {
         $set: {
           title: data.title,
           paidBy: data.paidBy,
-          items: data.items,
+          items: data.items.map((item) => ({
+            ...item,
+            _id: item._id ?? new ObjectId().toHexString(),
+          })),
           updatedAt: new Date(),
         },
       },

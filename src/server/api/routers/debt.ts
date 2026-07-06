@@ -27,7 +27,7 @@ const UpdateDebtInput = z.object({
   _id: z.string().min(1),
   title: z.string().min(1),
   paidBy: z.string().min(1),
-  items: z.array(ItemSchema).min(1),
+  items: z.array(ItemSchema.extend({ _id: z.string().optional() })).min(1),
 });
 
 function mapDebt(doc: DebtDoc) {
