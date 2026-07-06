@@ -53,8 +53,19 @@ export interface DebtRepository {
   delete(id: string): Promise<boolean>;
   markItemPaid(debtId: string, itemId: string): Promise<boolean>;
   markItemUnpaid(debtId: string, itemId: string): Promise<boolean>;
+  settleBetween(personA: string, personB: string): Promise<number>;
+  getSettlementPreview(
+    personA: string,
+    personB: string,
+  ): Promise<{ items: SettlementItem[]; total: number }>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
+}
+
+export interface SettlementItem {
+  name: string;
+  price: number;
+  debtTitle: string;
 }
 
 const COLLECTION = "debts";
@@ -185,6 +196,44 @@ export class MongoDebtRepository implements DebtRepository {
       { $set: { "items.$.paid": false, updatedAt: new Date() } },
     );
     return result.matchedCount > 0;
+  }
+
+  async settleBetween(personA: string, personB: string): Promise<number> {
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateMany(
+      { paidBy: personB, "items.owner": personA, "items.paid": false },
+      { $set: { "items.$[elem].paid": true, updatedAt: new Date() } },
+      { arrayFilters: [{ "elem.owner": personA, "elem.paid": false }] },
+    );
+
+    return result.modifiedCount;
+  }
+
+  async getSettlementPreview(
+    personA: string,
+    personB: string,
+  ): Promise<{ items: SettlementItem[]; total: number }> {
+    const debts = await this.db
+      .collection<DebtDoc>(COLLECTION)
+      .find(
+        { paidBy: personB, "items.owner": personA, "items.paid": false },
+        { projection: { title: 1, items: 1 } },
+      )
+      .toArray();
+
+    const items = debts.flatMap((debt) =>
+      debt.items
+        .filter((item) => item.owner === personA && !item.paid)
+        .map((item) => ({
+          name: item.name,
+          price: item.price,
+          debtTitle: debt.title,
+        })),
+    );
+
+    return {
+      items,
+      total: items.reduce((s, i) => s + i.price, 0),
+    };
   }
 
   async getAllOwners(): Promise<string[]> {

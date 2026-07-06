@@ -1,10 +1,23 @@
 import { z } from "zod";
 
+export const PEOPLE = [
+  "KK",
+  "LO",
+  "PP",
+  "KA",
+  "YK",
+  "MS",
+  "GT",
+  "VJ",
+] as const;
+
+export const PeopleEnum = z.enum(PEOPLE);
+
 export const ItemSchema = z.object({
   _id: z.string(),
   name: z.string(),
   price: z.number().int(),
-  owner: z.string(),
+  owner: PeopleEnum,
   paid: z.boolean(),
 });
 

@@ -9,18 +9,27 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
+import { PEOPLE } from "~/server/db/schema";
+
+const personValidation = z
+  .string()
+  .min(1, "Required")
+  .refine(
+    (val) => (PEOPLE as readonly string[]).includes(val),
+    { message: `Must be one of: ${PEOPLE.join(", ")}` },
+  );
 
 const ItemFormSchema = z.object({
   _id: z.string().optional(),
   name: z.string().min(1, "Item name is required"),
   price: z.string().min(1, "Price is required"),
-  owner: z.string().min(1, "Owner is required"),
+  owner: personValidation,
   paid: z.boolean().optional(),
 });
 
 const DebtFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  paidBy: z.string().min(1, "Paid by is required"),
+  paidBy: personValidation,
   items: z.array(ItemFormSchema).min(1, "At least one item is required"),
 });
 
@@ -105,23 +114,23 @@ export function DebtForm({
       updateMutation.mutate({
         _id: initialValues._id,
         title: data.title,
-        paidBy: data.paidBy,
+        paidBy: data.paidBy as (typeof PEOPLE)[number],
         items: data.items.map((item) => ({
           _id: item._id,
           name: item.name,
           price: Math.round(parseFloat(item.price)),
-          owner: item.owner,
+          owner: item.owner as (typeof PEOPLE)[number],
           paid: item.paid ?? false,
         })),
       });
     } else {
       createMutation.mutate({
         title: data.title,
-        paidBy: data.paidBy,
+        paidBy: data.paidBy as (typeof PEOPLE)[number],
         items: data.items.map((item) => ({
           name: item.name,
           price: Math.round(parseFloat(item.price)),
-          owner: item.owner,
+          owner: item.owner as (typeof PEOPLE)[number],
           paid: false,
         })),
       });
@@ -130,12 +139,13 @@ export function DebtForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+      <button type="submit" hidden aria-hidden="true" />
       <div className="flex flex-col gap-2">
         <Label>Title</Label>
         <Input
           type="text"
           {...register("title")}
-          placeholder="e.g. Dinner at Joe's"
+          placeholder="e.g. Makan Malam"
           className="h-11 rounded-lg border-black/10 px-4 text-base focus-visible:border-black focus-visible:ring-black/20"
         />
         {errors.title && (
@@ -148,7 +158,7 @@ export function DebtForm({
         <Input
           type="text"
           {...register("paidBy")}
-          placeholder="e.g. Alice"
+          placeholder="KK, LO, PP, KA, YK, MS, GT, VJ"
           className="h-11 rounded-lg border-black/10 px-4 text-base focus-visible:border-black focus-visible:ring-black/20"
         />
         {errors.paidBy && (
@@ -184,9 +194,14 @@ export function DebtForm({
               <Input
                 type="text"
                 {...register(`items.${index}.owner`)}
-                placeholder="Owner"
+                placeholder="KK, LO, PP, KA, YK, MS, GT, VJ"
                 className="h-9 flex-1 rounded-lg border-black/10 px-3 text-sm focus-visible:border-black focus-visible:ring-black/20"
               />
+              {errors.items?.[index]?.owner?.message && (
+                <span className="text-xs text-red-600">
+                  {errors.items[index]?.owner?.message}
+                </span>
+              )}
               {fields.length > 1 && (
                 <Button
                   type="button"
@@ -199,7 +214,6 @@ export function DebtForm({
                 </Button>
               )}
             </div>
-            <input type="hidden" {...register(`items.${index}.paid`)} />
             {isEdit && field.paid && (
               <span className="text-xs text-black/40">Already paid</span>
             )}

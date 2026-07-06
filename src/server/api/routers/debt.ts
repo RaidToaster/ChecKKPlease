@@ -6,11 +6,11 @@ import {
   createTRPCRouter,
   protectedProcedure,
 } from "~/server/api/trpc";
-import { ItemSchema } from "~/server/db/schema";
+import { ItemSchema, PeopleEnum } from "~/server/db/schema";
 
 const CreateDebtInput = z.object({
   title: z.string().min(1),
-  paidBy: z.string().min(1),
+  paidBy: PeopleEnum,
   items: z.array(ItemSchema.omit({ _id: true })).min(1),
 });
 
@@ -26,7 +26,7 @@ const GetAllDebtsInput = z.object({
 const UpdateDebtInput = z.object({
   _id: z.string().min(1),
   title: z.string().min(1),
-  paidBy: z.string().min(1),
+  paidBy: PeopleEnum,
   items: z.array(ItemSchema.extend({ _id: z.string().optional() })).min(1),
 });
 
@@ -101,6 +101,35 @@ export const debtRouter = createTRPCRouter({
       if (!found) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
       }
+    }),
+
+  getSettlementPreview: protectedProcedure
+    .input(
+      z.object({
+        personA: PeopleEnum,
+        personB: PeopleEnum,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.debtRepository.getSettlementPreview(
+        input.personA,
+        input.personB,
+      );
+    }),
+
+  settleBetween: protectedProcedure
+    .input(
+      z.object({
+        personA: PeopleEnum,
+        personB: PeopleEnum,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const count = await ctx.debtRepository.settleBetween(
+        input.personA,
+        input.personB,
+      );
+      return { updatedCount: count };
     }),
 
   markItemAsUnpaid: protectedProcedure
