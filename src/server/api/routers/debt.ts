@@ -71,13 +71,19 @@ export const debtRouter = createTRPCRouter({
     .input(UpdateDebtInput)
     .mutation(async ({ ctx, input }) => {
       const { _id, ...data } = input;
-      await ctx.debtRepository.update(_id, data);
+      const found = await ctx.debtRepository.update(_id, data);
+      if (!found) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+      }
     }),
 
   deleteDebt: protectedProcedure
     .input(z.object({ _id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.debtRepository.delete(input._id);
+      const found = await ctx.debtRepository.delete(input._id);
+      if (!found) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+      }
     }),
 
   markItemAsPaid: protectedProcedure
@@ -88,7 +94,13 @@ export const debtRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.debtRepository.markItemPaid(input.debtId, input.itemId);
+      const found = await ctx.debtRepository.markItemPaid(
+        input.debtId,
+        input.itemId,
+      );
+      if (!found) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+      }
     }),
 
   markItemAsUnpaid: protectedProcedure
@@ -99,6 +111,12 @@ export const debtRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.debtRepository.markItemUnpaid(input.debtId, input.itemId);
+      const found = await ctx.debtRepository.markItemUnpaid(
+        input.debtId,
+        input.itemId,
+      );
+      if (!found) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+      }
     }),
 });

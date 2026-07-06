@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { api } from "~/trpc/react";
 import { AddDebtCard } from "./AddDebtCard";
@@ -16,6 +16,24 @@ const defaultFilters: DebtFiltersState = {
   dateFrom: "",
   dateTo: "",
 };
+
+function useInvalidateDebts() {
+  const utils = api.useUtils();
+
+  const invalidate = useCallback(
+    (debtId?: string) => {
+      void utils.debt.getAllDebts.invalidate();
+      void utils.debt.getAllOwners.invalidate();
+      void utils.debt.getAllPaidBy.invalidate();
+      if (debtId) {
+        void utils.debt.getDebtById.invalidate({ _id: debtId });
+      }
+    },
+    [utils],
+  );
+
+  return { invalidate };
+}
 
 export function DebtGrid() {
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
@@ -41,7 +59,6 @@ export function DebtGrid() {
     filters.dateTo !== "";
 
   const { data: debts, isLoading } = api.debt.getAllDebts.useQuery(filters);
-  const utils = api.useUtils();
 
   const handleAddClick = () => {
     setPanelMode("create");
@@ -60,30 +77,24 @@ export function DebtGrid() {
     setSelectedDebtId(null);
   };
 
+  const { invalidate: invalidateDebts } = useInvalidateDebts();
+
   const handleDebtCreated = () => {
-    void utils.debt.getAllDebts.invalidate();
-    void utils.debt.getAllOwners.invalidate();
-    void utils.debt.getAllPaidBy.invalidate();
+    invalidateDebts();
     handleClosePanel();
   };
 
   const handleDebtDeleted = () => {
-    void utils.debt.getAllDebts.invalidate();
-    void utils.debt.getAllOwners.invalidate();
-    void utils.debt.getAllPaidBy.invalidate();
+    invalidateDebts();
     handleClosePanel();
   };
 
   const handleItemPaid = () => {
-    void utils.debt.getAllDebts.invalidate();
-    void utils.debt.getDebtById.invalidate({ _id: selectedDebtId ?? "" });
+    invalidateDebts(selectedDebtId ?? undefined);
   };
 
   const handleDebtUpdated = () => {
-    void utils.debt.getAllDebts.invalidate();
-    void utils.debt.getDebtById.invalidate({ _id: selectedDebtId ?? "" });
-    void utils.debt.getAllOwners.invalidate();
-    void utils.debt.getAllPaidBy.invalidate();
+    invalidateDebts(selectedDebtId ?? undefined);
   };
 
   const debtList = debts ?? [];

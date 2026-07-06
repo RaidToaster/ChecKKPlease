@@ -49,10 +49,10 @@ export interface DebtRepository {
   findAll(filters: DebtFilters): Promise<DebtDoc[]>;
   findById(id: string): Promise<DebtDoc | null>;
   create(data: CreateDebtData): Promise<DebtDoc>;
-  update(id: string, data: UpdateDebtData): Promise<void>;
-  delete(id: string): Promise<void>;
-  markItemPaid(debtId: string, itemId: string): Promise<void>;
-  markItemUnpaid(debtId: string, itemId: string): Promise<void>;
+  update(id: string, data: UpdateDebtData): Promise<boolean>;
+  delete(id: string): Promise<boolean>;
+  markItemPaid(debtId: string, itemId: string): Promise<boolean>;
+  markItemUnpaid(debtId: string, itemId: string): Promise<boolean>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
 }
@@ -146,8 +146,8 @@ export class MongoDebtRepository implements DebtRepository {
     return doc;
   }
 
-  async update(id: string, data: UpdateDebtData): Promise<void> {
-    await this.db.collection<DebtDoc>(COLLECTION).updateOne(
+  async update(id: string, data: UpdateDebtData): Promise<boolean> {
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {
@@ -161,26 +161,30 @@ export class MongoDebtRepository implements DebtRepository {
         },
       },
     );
+    return result.matchedCount > 0;
   }
 
-  async delete(id: string): Promise<void> {
-    await this.db.collection<DebtDoc>(COLLECTION).deleteOne({
+  async delete(id: string): Promise<boolean> {
+    const result = await this.db.collection<DebtDoc>(COLLECTION).deleteOne({
       _id: new ObjectId(id),
     });
+    return result.deletedCount > 0;
   }
 
-  async markItemPaid(debtId: string, itemId: string): Promise<void> {
-    await this.db.collection<DebtDoc>(COLLECTION).updateOne(
+  async markItemPaid(debtId: string, itemId: string): Promise<boolean> {
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
       { _id: new ObjectId(debtId), "items._id": itemId },
       { $set: { "items.$.paid": true, updatedAt: new Date() } },
     );
+    return result.matchedCount > 0;
   }
 
-  async markItemUnpaid(debtId: string, itemId: string): Promise<void> {
-    await this.db.collection<DebtDoc>(COLLECTION).updateOne(
+  async markItemUnpaid(debtId: string, itemId: string): Promise<boolean> {
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
       { _id: new ObjectId(debtId), "items._id": itemId },
       { $set: { "items.$.paid": false, updatedAt: new Date() } },
     );
+    return result.matchedCount > 0;
   }
 
   async getAllOwners(): Promise<string[]> {
