@@ -14,6 +14,7 @@ import { ZodError } from "zod";
 import { env } from "~/env";
 import { auth } from "~/server/better-auth";
 import { mongo } from "~/server/db";
+import { MongoDebtRepository } from "~/server/repositories/debt";
 
 /**
  * 1. CONTEXT
@@ -33,6 +34,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   });
   return {
     mongo,
+    debtRepository: new MongoDebtRepository(mongo),
     session,
     ...opts,
   };
