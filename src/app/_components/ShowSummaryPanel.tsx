@@ -168,8 +168,7 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
 
               {personValid &&
                 !isFetching &&
-                summary &&
-                summary.debtors.length === 0 && (
+                summary?.debtors.length === 0 && (
                   <div className="py-8 text-center text-sm text-black/40">
                     Nobody currently owes {person} money.
                   </div>
