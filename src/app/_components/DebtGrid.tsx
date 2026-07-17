@@ -8,6 +8,7 @@ import { DebtCard } from "./DebtCard";
 import { DebtDetailPanel } from "./DebtDetailPanel";
 import { DebtFilters, type DebtFiltersState } from "./DebtFilters";
 import { SettleUpPanel } from "./SettleUpPanel";
+import { ShowSummaryPanel } from "./ShowSummaryPanel";
 
 const defaultFilters: DebtFiltersState = {
   search: "",
@@ -41,6 +42,7 @@ export function DebtGrid() {
   const [panelMode, setPanelMode] = useState<"detail" | "create">("detail");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isSettlePanelOpen, setIsSettlePanelOpen] = useState(false);
+  const [isSummaryPanelOpen, setIsSummaryPanelOpen] = useState(false);
   const [filters, setFilters] = useState<DebtFiltersState>(defaultFilters);
 
   const { data: owners = [] } = api.debt.getAllOwners.useQuery();
@@ -113,6 +115,7 @@ export function DebtGrid() {
         paidByList={sortedPaidBy}
         onFiltersChange={setFilters}
         onSettleUpClick={() => setIsSettlePanelOpen(true)}
+        onShowSummaryClick={() => setIsSummaryPanelOpen(true)}
       />
 
       {isLoading ? (
@@ -149,6 +152,11 @@ export function DebtGrid() {
         isOpen={isSettlePanelOpen}
         onClose={() => setIsSettlePanelOpen(false)}
         onSettled={handleSettled}
+      />
+
+      <ShowSummaryPanel
+        isOpen={isSummaryPanelOpen}
+        onClose={() => setIsSummaryPanelOpen(false)}
       />
 
       <DebtDetailPanel

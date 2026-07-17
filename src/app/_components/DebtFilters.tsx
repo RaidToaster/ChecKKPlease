@@ -28,6 +28,7 @@ interface DebtFiltersProps {
   paidByList: string[];
   onFiltersChange: (filters: DebtFiltersState) => void;
   onSettleUpClick: () => void;
+  onShowSummaryClick: () => void;
 }
 
 export function DebtFilters({
@@ -36,6 +37,7 @@ export function DebtFilters({
   paidByList,
   onFiltersChange,
   onSettleUpClick,
+  onShowSummaryClick,
 }: DebtFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -74,6 +76,13 @@ export function DebtFilters({
         className="h-8 cursor-pointer rounded-lg border border-black/10 bg-black px-3 text-sm font-medium text-white transition hover:bg-black/80"
       >
         Settle Up
+      </button>
+
+      <button
+        onClick={onShowSummaryClick}
+        className="h-8 cursor-pointer rounded-lg border border-black/10 bg-white px-3 text-sm font-medium text-black transition hover:bg-black/5"
+      >
+        Show Summary
       </button>
 
       <div className="relative">

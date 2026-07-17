@@ -58,6 +58,7 @@ export interface DebtRepository {
     personA: string,
     personB: string,
   ): Promise<{ items: SettlementItem[]; total: number }>;
+  getDebtSummary(creditor: string): Promise<DebtSummary>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
 }
@@ -66,6 +67,25 @@ export interface SettlementItem {
   name: string;
   price: number;
   debtTitle: string;
+}
+
+export interface DebtSummaryItem {
+  name: string;
+  price: number;
+  debtTitle: string;
+  date: Date;
+}
+
+export interface DebtSummaryByPerson {
+  person: string;
+  items: DebtSummaryItem[];
+  total: number;
+}
+
+export interface DebtSummary {
+  creditor: string;
+  debtors: DebtSummaryByPerson[];
+  grandTotal: number;
 }
 
 const COLLECTION = "debts";
@@ -233,6 +253,47 @@ export class MongoDebtRepository implements DebtRepository {
     return {
       items,
       total: items.reduce((s, i) => s + i.price, 0),
+    };
+  }
+
+  async getDebtSummary(creditor: string): Promise<DebtSummary> {
+    const debts = await this.db
+      .collection<DebtDoc>(COLLECTION)
+      .find(
+        { paidBy: creditor, "items.paid": false },
+        { projection: { title: 1, items: 1, createdAt: 1 } },
+      )
+      .sort({ createdAt: 1 })
+      .toArray();
+
+    const byPerson = new Map<string, DebtSummaryItem[]>();
+
+    for (const debt of debts) {
+      for (const item of debt.items) {
+        if (item.paid || item.owner === creditor) continue;
+        const list = byPerson.get(item.owner) ?? [];
+        list.push({
+          name: item.name,
+          price: item.price,
+          debtTitle: debt.title,
+          date: debt.createdAt,
+        });
+        byPerson.set(item.owner, list);
+      }
+    }
+
+    const debtors: DebtSummaryByPerson[] = [...byPerson.entries()]
+      .map(([person, items]) => ({
+        person,
+        items,
+        total: items.reduce((s, i) => s + i.price, 0),
+      }))
+      .sort((a, b) => a.person.localeCompare(b.person));
+
+    return {
+      creditor,
+      debtors,
+      grandTotal: debtors.reduce((s, d) => s + d.total, 0),
     };
   }
 
