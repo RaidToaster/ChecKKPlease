@@ -118,9 +118,14 @@ export const debtRouter = createTRPCRouter({
     }),
 
   getDebtSummary: protectedProcedure
-    .input(z.object({ person: PeopleEnum }))
+    .input(
+      z.object({
+        person: PeopleEnum,
+        direction: z.enum(["owed_to_you", "you_owe"]).default("owed_to_you"),
+      }),
+    )
     .query(async ({ ctx, input }) => {
-      return ctx.debtRepository.getDebtSummary(input.person);
+      return ctx.debtRepository.getDebtSummary(input.person, input.direction);
     }),
 
   settleBetween: protectedProcedure

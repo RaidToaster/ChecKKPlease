@@ -58,7 +58,10 @@ export interface DebtRepository {
     personA: string,
     personB: string,
   ): Promise<{ items: SettlementItem[]; total: number }>;
-  getDebtSummary(creditor: string): Promise<DebtSummary>;
+  getDebtSummary(
+    person: string,
+    direction: DebtSummaryDirection,
+  ): Promise<DebtSummary>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
 }
@@ -68,6 +71,8 @@ export interface SettlementItem {
   price: number;
   debtTitle: string;
 }
+
+export type DebtSummaryDirection = "owed_to_you" | "you_owe";
 
 export interface DebtSummaryItem {
   name: string;
@@ -83,8 +88,9 @@ export interface DebtSummaryByPerson {
 }
 
 export interface DebtSummary {
-  creditor: string;
-  debtors: DebtSummaryByPerson[];
+  person: string;
+  direction: DebtSummaryDirection;
+  parties: DebtSummaryByPerson[];
   grandTotal: number;
 }
 
@@ -256,13 +262,18 @@ export class MongoDebtRepository implements DebtRepository {
     };
   }
 
-  async getDebtSummary(creditor: string): Promise<DebtSummary> {
+  async getDebtSummary(
+    person: string,
+    direction: DebtSummaryDirection,
+  ): Promise<DebtSummary> {
+    const filter =
+      direction === "owed_to_you"
+        ? { paidBy: person, "items.paid": false }
+        : { "items.owner": person, "items.paid": false };
+
     const debts = await this.db
       .collection<DebtDoc>(COLLECTION)
-      .find(
-        { paidBy: creditor, "items.paid": false },
-        { projection: { title: 1, items: 1, createdAt: 1 } },
-      )
+      .find(filter, { projection: { title: 1, paidBy: 1, items: 1, createdAt: 1 } })
       .sort({ createdAt: 1 })
       .toArray();
 
@@ -270,30 +281,43 @@ export class MongoDebtRepository implements DebtRepository {
 
     for (const debt of debts) {
       for (const item of debt.items) {
-        if (item.paid || item.owner === creditor) continue;
-        const list = byPerson.get(item.owner) ?? [];
+        if (item.paid) continue;
+
+        let counterparty: string | null = null;
+        if (direction === "owed_to_you") {
+          // Others own unpaid items you paid for → they owe you
+          if (debt.paidBy !== person || item.owner === person) continue;
+          counterparty = item.owner;
+        } else {
+          // You own unpaid items someone else paid for → you owe them
+          if (item.owner !== person || debt.paidBy === person) continue;
+          counterparty = debt.paidBy;
+        }
+
+        const list = byPerson.get(counterparty) ?? [];
         list.push({
           name: item.name,
           price: item.price,
           debtTitle: debt.title,
           date: debt.createdAt,
         });
-        byPerson.set(item.owner, list);
+        byPerson.set(counterparty, list);
       }
     }
 
-    const debtors: DebtSummaryByPerson[] = [...byPerson.entries()]
-      .map(([person, items]) => ({
-        person,
+    const parties: DebtSummaryByPerson[] = [...byPerson.entries()]
+      .map(([other, items]) => ({
+        person: other,
         items,
         total: items.reduce((s, i) => s + i.price, 0),
       }))
       .sort((a, b) => a.person.localeCompare(b.person));
 
     return {
-      creditor,
-      debtors,
-      grandTotal: debtors.reduce((s, d) => s + d.total, 0),
+      person,
+      direction,
+      parties,
+      grandTotal: parties.reduce((s, d) => s + d.total, 0),
     };
   }
 

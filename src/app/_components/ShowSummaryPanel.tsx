@@ -13,6 +13,8 @@ interface ShowSummaryPanelProps {
   onClose: () => void;
 }
 
+type SummaryDirection = "owed_to_you" | "you_owe";
+
 const formatCurrency = (n: number) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -29,24 +31,30 @@ const formatItemDate = (date: Date | string) => {
 export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
   const { toast } = useToast();
   const [person, setPerson] = useState("");
+  const [direction, setDirection] = useState<SummaryDirection>("owed_to_you");
   const [copied, setCopied] = useState(false);
 
   const personValid = (PEOPLE as readonly string[]).includes(person);
+  const isOwedToYou = direction === "owed_to_you";
 
   const { data: summary, isFetching } = api.debt.getDebtSummary.useQuery(
-    { person: person as (typeof PEOPLE)[number] },
+    {
+      person: person as (typeof PEOPLE)[number],
+      direction,
+    },
     { enabled: personValid },
   );
 
   const handleClose = () => {
     setPerson("");
+    setDirection("owed_to_you");
     setCopied(false);
     onClose();
   };
 
   const buildClipboardText = () => {
-    if (!summary || summary.debtors.length === 0) return "";
-    return summary.debtors
+    if (!summary || summary.parties.length === 0) return "";
+    return summary.parties
       .map((d) => `${d.person} : ${formatCurrency(d.total)}`)
       .join("\n");
   };
@@ -67,7 +75,32 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
   if (!isOpen) return null;
 
   const hasSummary = !!summary && personValid;
-  const hasDebtors = hasSummary && summary.debtors.length > 0;
+  const hasParties = hasSummary && summary.parties.length > 0;
+
+  const partyHeading = (other: string, total: number) =>
+    isOwedToYou
+      ? `${other} owes you: ${formatCurrency(total)}`
+      : `You owe ${other}: ${formatCurrency(total)}`;
+
+  const grandTotalLabel = isOwedToYou
+    ? "Total owed to you:"
+    : "Total you owe:";
+
+  const emptyMessage = isOwedToYou
+    ? `Nobody currently owes ${person} money.`
+    : `${person} currently doesn't owe anyone.`;
+
+  const itemTone = isOwedToYou
+    ? {
+        heading: "text-green-700",
+        card: "border-green-200 bg-green-50/50",
+        amount: "text-green-700",
+      }
+    : {
+        heading: "text-amber-700",
+        card: "border-amber-200 bg-amber-50/50",
+        amount: "text-amber-700",
+      };
 
   return (
     <>
@@ -113,32 +146,67 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
                 )}
               </div>
 
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-black">
+                  Direction
+                </label>
+                <div className="grid grid-cols-2 gap-1 rounded-lg border border-black/10 bg-black/5 p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDirection("owed_to_you");
+                      setCopied(false);
+                    }}
+                    className={`cursor-pointer rounded-md px-2 py-2.5 text-center text-xs font-medium leading-snug transition ${
+                      isOwedToYou
+                        ? "bg-white text-black shadow-sm"
+                        : "text-black/50 hover:text-black/70"
+                    }`}
+                  >
+                    Siapa Saja yang Hutang ke Kamu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDirection("you_owe");
+                      setCopied(false);
+                    }}
+                    className={`cursor-pointer rounded-md px-2 py-2.5 text-center text-xs font-medium leading-snug transition ${
+                      !isOwedToYou
+                        ? "bg-white text-black shadow-sm"
+                        : "text-black/50 hover:text-black/70"
+                    }`}
+                  >
+                    Kamu Hutang ke Siapa Saja
+                  </button>
+                </div>
+              </div>
+
               {isFetching && (
                 <div className="py-8 text-center text-sm text-black/40">
                   Loading...
                 </div>
               )}
 
-              {hasDebtors && (
+              {hasParties && (
                 <div className="flex flex-col gap-4 pt-1">
                   <p className="text-sm text-black/60">
                     Who are you?{" "}
                     <span className="font-medium text-black">
-                      {summary.creditor}
+                      {summary.person}
                     </span>
                   </p>
 
-                  {summary.debtors.map((debtor) => (
-                    <div key={debtor.person} className="flex flex-col gap-1.5">
-                      <h3 className="text-sm font-medium text-green-700">
-                        {debtor.person} owes you:{" "}
-                        {formatCurrency(debtor.total)}
+                  {summary.parties.map((party) => (
+                    <div key={party.person} className="flex flex-col gap-1.5">
+                      <h3 className={`text-sm font-medium ${itemTone.heading}`}>
+                        {partyHeading(party.person, party.total)}
                       </h3>
                       <div className="flex flex-col gap-1.5">
-                        {debtor.items.map((item, i) => (
+                        {party.items.map((item, i) => (
                           <div
-                            key={`${debtor.person}-${i}`}
-                            className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/50 px-3 py-2 text-sm"
+                            key={`${party.person}-${i}`}
+                            className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${itemTone.card}`}
                           >
                             <div className="flex flex-col">
                               <span className="text-black">
@@ -148,7 +216,7 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
                                 {item.debtTitle}
                               </span>
                             </div>
-                            <span className="font-medium text-green-700">
+                            <span className={`font-medium ${itemTone.amount}`}>
                               {formatCurrency(item.price)}
                             </span>
                           </div>
@@ -159,8 +227,7 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
 
                   <div className="flex items-center justify-between border-t border-black/10 pt-3">
                     <span className="text-sm font-semibold text-black">
-                      Total owed to you:{" "}
-                      {formatCurrency(summary.grandTotal)}
+                      {grandTotalLabel} {formatCurrency(summary.grandTotal)}
                     </span>
                   </div>
                 </div>
@@ -168,15 +235,15 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
 
               {personValid &&
                 !isFetching &&
-                summary?.debtors.length === 0 && (
+                summary?.parties.length === 0 && (
                   <div className="py-8 text-center text-sm text-black/40">
-                    Nobody currently owes {person} money.
+                    {emptyMessage}
                   </div>
                 )}
             </div>
           </div>
 
-          {hasDebtors && (
+          {hasParties && (
             <div className="border-t border-black/10 px-6 py-4">
               <Button
                 onClick={handleCopy}
