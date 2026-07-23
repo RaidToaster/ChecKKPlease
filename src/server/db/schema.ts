@@ -9,6 +9,7 @@ export const PEOPLE = [
   "MS",
   "GT",
   "VJ",
+  "XY",
 ] as const;
 
 export const PeopleEnum = z.enum(PEOPLE);
