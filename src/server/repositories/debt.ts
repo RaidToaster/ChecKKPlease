@@ -1,4 +1,7 @@
-import { type Db, ObjectId } from "mongodb";
+import { type Db, type MongoClient, ObjectId } from "mongodb";
+import { createHash } from "node:crypto";
+import { TRPCError } from "@trpc/server";
+import { getNetBalances } from "../../lib/settlement";
 
 export interface DebtDoc {
   _id: ObjectId;
@@ -53,16 +56,76 @@ export interface DebtRepository {
   delete(id: string): Promise<boolean>;
   markItemPaid(debtId: string, itemId: string): Promise<boolean>;
   markItemUnpaid(debtId: string, itemId: string): Promise<boolean>;
-  settleBetween(personA: string, personB: string): Promise<number>;
+  settleBetween(
+    personA: string,
+    personB: string,
+    revision: string,
+  ): Promise<number>;
   getSettlementPreview(
     personA: string,
     personB: string,
-  ): Promise<{ items: SettlementItem[]; total: number }>;
+  ): Promise<SettlementPreview>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
 }
 
+export interface SettlementPreview {
+  items: SettlementItem[];
+  total: number;
+  aOwesB: number;
+  bOwesA: number;
+  from: string;
+  to: string;
+  revision: string;
+}
+
+function previewFor(
+  debts: DebtDoc[],
+  personA: string,
+  personB: string,
+): SettlementPreview {
+  const items = debts.flatMap((debt) =>
+    debt.items
+      .filter(
+        (item) =>
+          !item.paid &&
+          item.owner !== debt.paidBy &&
+          ((item.owner === personA && debt.paidBy === personB) ||
+            (item.owner === personB && debt.paidBy === personA)),
+      )
+      .map((item) => ({
+        ...item,
+        debtId: debt._id.toHexString(),
+        debtTitle: debt.title,
+        from: item.owner,
+        to: debt.paidBy,
+      })),
+  );
+  const balance = getNetBalances(debts).find(
+    (pair) =>
+      [pair.personA, pair.personB].includes(personA) &&
+      [pair.personA, pair.personB].includes(personB),
+  );
+  return {
+    items,
+    total: balance?.amount ?? 0,
+    aOwesB: items
+      .filter((item) => item.from === personA)
+      .reduce((sum, item) => sum + item.price, 0),
+    bOwesA: items
+      .filter((item) => item.from === personB)
+      .reduce((sum, item) => sum + item.price, 0),
+    from: balance?.from ?? personA,
+    to: balance?.to ?? personB,
+    revision: createHash("sha256")
+      .update(JSON.stringify(items.sort((a, b) => a._id.localeCompare(b._id))))
+      .digest("hex"),
+  };
+}
+
 export interface SettlementItem {
+  from: string;
+  to: string;
   name: string;
   price: number;
   debtTitle: string;
@@ -71,7 +134,10 @@ export interface SettlementItem {
 const COLLECTION = "debts";
 
 export class MongoDebtRepository implements DebtRepository {
-  constructor(private db: Db) {}
+  constructor(
+    private db: Db,
+    private client: MongoClient,
+  ) {}
 
   async findAll(filters: DebtFilters): Promise<DebtDoc[]> {
     const conditions: Record<string, unknown>[] = [];
@@ -89,14 +155,26 @@ export class MongoDebtRepository implements DebtRepository {
       });
     }
 
-    if (filters.status === "pending") {
-      conditions.push({ items: { $elemMatch: { paid: false } } });
-    } else if (filters.status === "settled") {
+    if (filters.status === "pending" || filters.status === "settled") {
+      const pendingCount = {
+        $size: {
+          $filter: {
+            input: "$items",
+            as: "item",
+            cond: {
+              $and: [
+                { $eq: ["$$item.paid", false] },
+                { $ne: ["$$item.owner", "$paidBy"] },
+              ],
+            },
+          },
+        },
+      };
       conditions.push({
-        $and: [
-          { "items.0": { $exists: true } },
-          { items: { $not: { $elemMatch: { paid: false } } } },
-        ],
+        $expr:
+          filters.status === "pending"
+            ? { $gt: [pendingCount, 0] }
+            : { $eq: [pendingCount, 0] },
       });
     }
 
@@ -183,68 +261,87 @@ export class MongoDebtRepository implements DebtRepository {
   }
 
   async markItemPaid(debtId: string, itemId: string): Promise<boolean> {
-    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
-      { _id: new ObjectId(debtId), "items._id": itemId },
-      { $set: { "items.$.paid": true, updatedAt: new Date() } },
-    );
+    const result = await this.db
+      .collection<DebtDoc>(COLLECTION)
+      .updateOne(
+        { _id: new ObjectId(debtId), "items._id": itemId },
+        { $set: { "items.$.paid": true, updatedAt: new Date() } },
+      );
     return result.matchedCount > 0;
   }
 
   async markItemUnpaid(debtId: string, itemId: string): Promise<boolean> {
-    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
-      { _id: new ObjectId(debtId), "items._id": itemId },
-      { $set: { "items.$.paid": false, updatedAt: new Date() } },
-    );
+    const result = await this.db
+      .collection<DebtDoc>(COLLECTION)
+      .updateOne(
+        { _id: new ObjectId(debtId), "items._id": itemId },
+        { $set: { "items.$.paid": false, updatedAt: new Date() } },
+      );
     return result.matchedCount > 0;
   }
 
-  async settleBetween(personA: string, personB: string): Promise<number> {
-    const result = await this.db.collection<DebtDoc>(COLLECTION).updateMany(
-      { paidBy: personB, "items.owner": personA, "items.paid": false },
-      { $set: { "items.$[elem].paid": true, updatedAt: new Date() } },
-      { arrayFilters: [{ "elem.owner": personA, "elem.paid": false }] },
-    );
-
-    return result.modifiedCount;
+  async settleBetween(
+    personA: string,
+    personB: string,
+    revision: string,
+  ): Promise<number> {
+    const session = this.client.startSession();
+    try {
+      return await session.withTransaction(async () => {
+        const collection = this.db.collection<DebtDoc>(COLLECTION);
+        const debts = await collection
+          .find({ paidBy: { $in: [personA, personB] } }, { session })
+          .toArray();
+        const preview = previewFor(debts, personA, personB);
+        if (preview.revision !== revision || preview.items.length === 0) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message:
+              "Saldo berubah. Periksa nominal terbaru sebelum konfirmasi.",
+          });
+        }
+        let count = 0;
+        for (const debt of debts) {
+          const owner = debt.paidBy === personA ? personB : personA;
+          if (!debt.items.some((item) => item.owner === owner && !item.paid))
+            continue;
+          const result = await collection.updateOne(
+            { _id: debt._id },
+            { $set: { "items.$[item].paid": true, updatedAt: new Date() } },
+            {
+              session,
+              arrayFilters: [{ "item.owner": owner, "item.paid": false }],
+            },
+          );
+          count += result.modifiedCount;
+        }
+        return count;
+      });
+    } finally {
+      await session.endSession();
+    }
   }
 
   async getSettlementPreview(
     personA: string,
     personB: string,
-  ): Promise<{ items: SettlementItem[]; total: number }> {
+  ): Promise<SettlementPreview> {
     const debts = await this.db
       .collection<DebtDoc>(COLLECTION)
-      .find(
-        { paidBy: personB, "items.owner": personA, "items.paid": false },
-        { projection: { title: 1, items: 1 } },
-      )
+      .find({ paidBy: { $in: [personA, personB] } })
       .toArray();
-
-    const items = debts.flatMap((debt) =>
-      debt.items
-        .filter((item) => item.owner === personA && !item.paid)
-        .map((item) => ({
-          name: item.name,
-          price: item.price,
-          debtTitle: debt.title,
-        })),
-    );
-
-    return {
-      items,
-      total: items.reduce((s, i) => s + i.price, 0),
-    };
+    return previewFor(debts, personA, personB);
   }
 
   async getAllOwners(): Promise<string[]> {
-    return this.db
-      .collection(COLLECTION)
-      .distinct("items.owner") as Promise<string[]>;
+    return this.db.collection(COLLECTION).distinct("items.owner") as Promise<
+      string[]
+    >;
   }
 
   async getAllPaidBy(): Promise<string[]> {
-    return this.db
-      .collection(COLLECTION)
-      .distinct("paidBy") as Promise<string[]>;
+    return this.db.collection(COLLECTION).distinct("paidBy") as Promise<
+      string[]
+    >;
   }
 }

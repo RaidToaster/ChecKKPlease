@@ -27,3 +27,23 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 ## How do I deploy this?
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+
+## Net debt
+
+Dashboard menampilkan selisih utang per pasangan dari semua transaksi belum
+selesai. Contoh: A berutang B Rp100.000 dan B berutang A Rp40.000 berarti A cukup
+membayar B Rp60.000. Bagian pembayar sendiri tidak dihitung sebagai utang.
+
+Pelunasan dikonfirmasi langsung pada baris ringkasan. Konfirmasi menyelesaikan
+item kedua arah, termasuk saldo impas tanpa transfer. Riwayat tetap menampilkan
+nominal transaksi asli; filter riwayat tidak mengubah ringkasan net debt.
+Tambah/edit transaksi tampil di halaman tanpa popup.
+
+Pelunasan memakai MongoDB transaction: gunakan replica set atau MongoDB Atlas.
+Tidak diperlukan migrasi. Data lama tidak otomatis ditandai lunas. Pembayaran
+sebagian belum tersedia. Preview yang sudah berubah ditolak dan perlu diperiksa
+ulang sebelum dikonfirmasi.
+
+Jalankan `npm test` (memerlukan Bun dan Node) untuk pengujian perhitungan dan
+repository dengan adapter dalam memori. Pengujian ini tidak menghubungi database
+nyata. Jalankan `npm run typecheck` untuk pemeriksaan TypeScript.

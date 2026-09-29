@@ -13,24 +13,29 @@ import { PEOPLE } from "~/server/db/schema";
 
 const personValidation = z
   .string()
-  .min(1, "Required")
-  .refine(
-    (val) => (PEOPLE as readonly string[]).includes(val),
-    { message: `Must be one of: ${PEOPLE.join(", ")}` },
-  );
+  .min(1, "Wajib diisi")
+  .refine((val) => (PEOPLE as readonly string[]).includes(val), {
+    message: `Pilih salah satu: ${PEOPLE.join(", ")}`,
+  });
 
 const ItemFormSchema = z.object({
   _id: z.string().optional(),
-  name: z.string().min(1, "Item name is required"),
-  price: z.string().min(1, "Price is required"),
+  name: z.string().min(1, "Nama item wajib diisi"),
+  price: z
+    .string()
+    .min(1, "Harga wajib diisi")
+    .refine(
+      (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0,
+      "Masukkan nominal rupiah bulat lebih dari 0",
+    ),
   owner: personValidation,
   paid: z.boolean().optional(),
 });
 
 const DebtFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Judul wajib diisi"),
   paidBy: personValidation,
-  items: z.array(ItemFormSchema).min(1, "At least one item is required"),
+  items: z.array(ItemFormSchema).min(1, "Tambahkan minimal satu item"),
 });
 
 type DebtFormValues = z.infer<typeof DebtFormSchema>;
@@ -118,7 +123,7 @@ export function DebtForm({
         items: data.items.map((item) => ({
           _id: item._id,
           name: item.name,
-          price: Math.round(parseFloat(item.price)),
+          price: Number(item.price),
           owner: item.owner as (typeof PEOPLE)[number],
           paid: item.paid ?? false,
         })),
@@ -129,7 +134,7 @@ export function DebtForm({
         paidBy: data.paidBy as (typeof PEOPLE)[number],
         items: data.items.map((item) => ({
           name: item.name,
-          price: Math.round(parseFloat(item.price)),
+          price: Number(item.price),
           owner: item.owner as (typeof PEOPLE)[number],
           paid: false,
         })),
@@ -141,11 +146,12 @@ export function DebtForm({
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
       <button type="submit" hidden aria-hidden="true" />
       <div className="flex flex-col gap-2">
-        <Label>Title</Label>
+        <Label htmlFor="debt-title">Judul transaksi</Label>
         <Input
           type="text"
+          id="debt-title"
           {...register("title")}
-          placeholder="e.g. Makan Malam"
+          placeholder="Contoh: Makan malam"
           className="h-11 rounded-lg border-black/10 px-4 text-base focus-visible:border-black focus-visible:ring-black/20"
         />
         {errors.title && (
@@ -154,20 +160,26 @@ export function DebtForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Paid By</Label>
-        <Input
-          type="text"
+        <Label>Dibayar oleh</Label>
+        <select
+          aria-label="Dibayar oleh"
           {...register("paidBy")}
-          placeholder="KK, LO, PP, KA, YK, MS, GT, VJ"
-          className="h-11 rounded-lg border-black/10 px-4 text-base focus-visible:border-black focus-visible:ring-black/20"
-        />
+          className="h-11 rounded-lg border border-black/10 px-3"
+        >
+          <option value="">Pilih pembayar</option>
+          {PEOPLE.map((person) => (
+            <option key={person} value={person}>
+              {person}
+            </option>
+          ))}
+        </select>
         {errors.paidBy && (
           <span className="text-xs text-red-600">{errors.paidBy.message}</span>
         )}
       </div>
 
       <div className="flex flex-col gap-4">
-        <Label>Items</Label>
+        <Label>Rincian pengeluaran</Label>
         {fields.map((field, index) => (
           <div
             key={field.id}
@@ -177,26 +189,34 @@ export function DebtForm({
             <div className="flex gap-2">
               <Input
                 type="text"
+                aria-label={`Nama item ${index + 1}`}
                 {...register(`items.${index}.name`)}
-                placeholder="Item name"
-                className="h-9 flex-1 rounded-lg border-black/10 px-3 text-sm focus-visible:border-black focus-visible:ring-black/20"
+                placeholder="Nama item"
+                className="h-9 min-w-0 flex-1 rounded-lg border-black/10 px-3 text-sm focus-visible:border-black focus-visible:ring-black/20"
               />
               <Input
                 type="number"
                 step="1"
                 min="1"
+                aria-label={`Harga item ${index + 1} dalam rupiah`}
                 {...register(`items.${index}.price`)}
-                placeholder="Price"
+                placeholder="Harga (Rp)"
                 className="h-9 w-32 rounded-lg border-black/10 px-3 text-sm focus-visible:border-black focus-visible:ring-black/20"
               />
             </div>
             <div className="flex items-center gap-2">
-              <Input
-                type="text"
+              <select
+                aria-label={`Pemilik item ${index + 1}`}
                 {...register(`items.${index}.owner`)}
-                placeholder="KK, LO, PP, KA, YK, MS, GT, VJ"
-                className="h-9 flex-1 rounded-lg border-black/10 px-3 text-sm focus-visible:border-black focus-visible:ring-black/20"
-              />
+                className="h-10 min-w-0 flex-1 rounded-lg border border-black/10 px-3 text-sm"
+              >
+                <option value="">Pilih pemilik</option>
+                {PEOPLE.map((person) => (
+                  <option key={person} value={person}>
+                    {person}
+                  </option>
+                ))}
+              </select>
               {errors.items?.[index]?.owner?.message && (
                 <span className="text-xs text-red-600">
                   {errors.items[index]?.owner?.message}
@@ -210,12 +230,22 @@ export function DebtForm({
                   onClick={() => remove(index)}
                   className="h-9 rounded-lg border-black/10 text-xs hover:border-black hover:bg-black hover:text-white"
                 >
-                  Remove
+                  Hapus
                 </Button>
               )}
             </div>
+            {errors.items?.[index]?.price && (
+              <p role="alert" className="text-xs text-red-600">
+                {errors.items[index]?.price?.message}
+              </p>
+            )}
+            {errors.items?.[index]?.name && (
+              <p role="alert" className="text-xs text-red-600">
+                {errors.items[index]?.name?.message}
+              </p>
+            )}
             {isEdit && field.paid && (
-              <span className="text-xs text-black/40">Already paid</span>
+              <span className="text-xs text-black/40">Sudah selesai</span>
             )}
           </div>
         ))}
@@ -228,7 +258,7 @@ export function DebtForm({
           onClick={() => append({ name: "", price: "", owner: "" })}
           className="self-start rounded-lg border-black/10 text-sm hover:border-black hover:bg-black hover:text-white"
         >
-          + Add Item
+          + Tambah item
         </Button>
       </div>
 
@@ -239,19 +269,20 @@ export function DebtForm({
           className="h-11 w-full rounded-lg bg-black text-sm font-medium text-white hover:bg-black/80"
         >
           {isPending
-            ? "Saving..."
+            ? "Menyimpan…"
             : isEdit
-              ? "Save Changes"
-              : "Create Debt"}
+              ? "Simpan perubahan"
+              : "Simpan transaksi"}
         </Button>
-        {isEdit && onCancel && (
+        {onCancel && (
           <Button
             type="button"
             variant="outline"
+            disabled={isPending}
             onClick={onCancel}
             className="h-11 w-full rounded-lg border-black/10 text-sm hover:border-black hover:bg-black hover:text-white"
           >
-            Cancel
+            Batal
           </Button>
         )}
       </div>

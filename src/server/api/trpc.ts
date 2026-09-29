@@ -13,7 +13,7 @@ import { ZodError } from "zod";
 
 import { env } from "~/env";
 import { auth } from "~/server/better-auth";
-import { mongo } from "~/server/db";
+import { mongo, mongoClient } from "~/server/db";
 import { MongoDebtRepository } from "~/server/repositories/debt";
 
 /**
@@ -34,7 +34,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   });
   return {
     mongo,
-    debtRepository: new MongoDebtRepository(mongo),
+    debtRepository: new MongoDebtRepository(mongo, mongoClient),
     session,
     ...opts,
   };

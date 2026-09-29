@@ -1,11 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { getNetBalances } from "~/lib/settlement";
 import type { DebtDoc } from "~/server/repositories/debt";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { ItemSchema, PeopleEnum } from "~/server/db/schema";
 
 const CreateDebtInput = z.object({
@@ -34,7 +32,12 @@ function mapDebt(doc: DebtDoc) {
   return { ...doc, _id: doc._id.toHexString() };
 }
 
+const PairInput = z.object({ personA: PeopleEnum, personB: PeopleEnum });
+
 export const debtRouter = createTRPCRouter({
+  getNetBalances: protectedProcedure.query(async ({ ctx }) => {
+    return getNetBalances(await ctx.debtRepository.findAll({}));
+  }),
   createDebt: protectedProcedure
     .input(CreateDebtInput)
     .mutation(async ({ ctx, input }) => {
@@ -105,29 +108,27 @@ export const debtRouter = createTRPCRouter({
 
   getSettlementPreview: protectedProcedure
     .input(
-      z.object({
-        personA: PeopleEnum,
-        personB: PeopleEnum,
-      }),
+      PairInput.refine(
+        (input) => input.personA !== input.personB,
+        "Pilih dua orang berbeda",
+      ),
     )
-    .query(async ({ ctx, input }) => {
-      return ctx.debtRepository.getSettlementPreview(
-        input.personA,
-        input.personB,
-      );
-    }),
+    .query(({ ctx, input }) =>
+      ctx.debtRepository.getSettlementPreview(input.personA, input.personB),
+    ),
 
   settleBetween: protectedProcedure
     .input(
-      z.object({
-        personA: PeopleEnum,
-        personB: PeopleEnum,
-      }),
+      PairInput.extend({ revision: z.string().min(1) }).refine(
+        (input) => input.personA !== input.personB,
+        "Pilih dua orang berbeda",
+      ),
     )
     .mutation(async ({ ctx, input }) => {
       const count = await ctx.debtRepository.settleBetween(
         input.personA,
         input.personB,
+        input.revision,
       );
       return { updatedCount: count };
     }),

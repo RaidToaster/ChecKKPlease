@@ -19,9 +19,9 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
 
   const paidTotal = useMemo(() => {
     return debt.items
-      .filter((item) => item.paid)
+      .filter((item) => item.paid || item.owner === debt.paidBy)
       .reduce((sum, item) => sum + item.price, 0);
-  }, [debt.items]);
+  }, [debt.items, debt.paidBy]);
 
   const ownerTotals = useMemo(() => {
     const map = new Map<string, { total: number; allPaid: boolean }>();
@@ -29,13 +29,16 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
       const existing = map.get(item.owner);
       if (existing) {
         existing.total += item.price;
-        if (!item.paid) existing.allPaid = false;
+        if (!item.paid && item.owner !== debt.paidBy) existing.allPaid = false;
       } else {
-        map.set(item.owner, { total: item.price, allPaid: item.paid });
+        map.set(item.owner, {
+          total: item.price,
+          allPaid: item.paid || item.owner === debt.paidBy,
+        });
       }
     }
     return Array.from(map.entries());
-  }, [debt.items]);
+  }, [debt.items, debt.paidBy]);
 
   const formatCurrency = (n: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -50,15 +53,16 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
   return (
     <button
       onClick={onClick}
-      className="flex h-full flex-col items-start gap-3 rounded-2xl border border-black/10 bg-white p-6 text-left transition hover:border-black cursor-pointer"
+      className="flex h-full cursor-pointer flex-col items-start gap-3 rounded-2xl border border-black/10 bg-white p-6 text-left transition hover:border-black"
     >
       <h3 className="text-base font-medium text-black">{debt.title}</h3>
       <div className="flex flex-col gap-1">
+        <span className="text-xs text-black/50">Total transaksi</span>
         <span className="text-2xl font-semibold tracking-tight text-black">
           {formatCurrency(total)}
         </span>
         <span className="text-xs text-black/40">
-          Paid by {debt.paidBy}
+          Dibayar oleh {debt.paidBy}
         </span>
       </div>
 
@@ -78,11 +82,11 @@ export function DebtCard({ debt, onClick }: DebtCardProps) {
 
       <div className="mt-auto flex items-center gap-2 pt-1">
         <span className="text-sm text-black/60">
-          {formatCurrency(paidTotal)} paid
+          {formatCurrency(paidTotal)} selesai
         </span>
         {allPaid && (
           <span className="rounded-full bg-black px-2 py-0.5 text-xs font-medium text-white">
-            Settled
+            Selesai
           </span>
         )}
       </div>

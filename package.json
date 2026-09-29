@@ -13,7 +13,8 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun build tests/settlement.test.ts --target=node --packages=external --outfile=node_modules/.cache/settlement.test.mjs && node node_modules/.cache/settlement.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

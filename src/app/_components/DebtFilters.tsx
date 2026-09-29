@@ -27,7 +27,6 @@ interface DebtFiltersProps {
   owners: string[];
   paidByList: string[];
   onFiltersChange: (filters: DebtFiltersState) => void;
-  onSettleUpClick: () => void;
 }
 
 export function DebtFilters({
@@ -35,7 +34,6 @@ export function DebtFilters({
   owners,
   paidByList,
   onFiltersChange,
-  onSettleUpClick,
 }: DebtFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -69,25 +67,20 @@ export function DebtFilters({
 
   return (
     <div className="mb-8 flex flex-wrap items-center gap-3">
-      <button
-        onClick={onSettleUpClick}
-        className="h-8 cursor-pointer rounded-lg border border-black/10 bg-black px-3 text-sm font-medium text-white transition hover:bg-black/80"
-      >
-        Settle Up
-      </button>
-
       <div className="relative">
-        <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-black/40" />
+        <Search className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-black/40" />
         <input
+          aria-label="Cari transaksi"
           type="text"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search debts, people..."
-          className="h-8 w-48 rounded-lg border border-input bg-transparent pl-7 pr-2.5 text-sm text-black outline-none transition-colors font-[family-name:var(--font-sans)] placeholder:text-black/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="Cari transaksi atau orang…"
+          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 w-48 rounded-lg border bg-transparent pr-2.5 pl-7 font-[family-name:var(--font-sans)] text-sm text-black transition-colors outline-none placeholder:text-black/40 focus-visible:ring-3"
         />
       </div>
 
       <select
+        aria-label="Status transaksi"
         value={filters.status}
         onChange={(e) =>
           onFiltersChange({
@@ -97,68 +90,81 @@ export function DebtFilters({
         }
         className={selectClass}
       >
-        <option value="all">All</option>
-        <option value="pending">Pending</option>
-        <option value="settled">Settled</option>
+        <option value="all">Semua</option>
+        <option value="pending">Belum lunas</option>
+        <option value="settled">Selesai</option>
       </select>
 
-      <select
-        value={filters.owner}
-        onChange={(e) =>
-          onFiltersChange({ ...filters, owner: e.target.value })
-        }
-        className={selectClass}
-      >
-        <option value="">Any owner</option>
-        {owners.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+      <details className="w-full">
+        <summary className="cursor-pointer text-sm text-black/60">
+          Filter lainnya
+          {filters.owner || filters.paidBy || filters.dateFrom || filters.dateTo
+            ? " · aktif"
+            : ""}
+        </summary>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <select
+            aria-label="Pemilik utang"
+            value={filters.owner}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, owner: e.target.value })
+            }
+            className={selectClass}
+          >
+            <option value="">Semua pemilik</option>
+            {owners.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
 
-      <select
-        value={filters.paidBy}
-        onChange={(e) =>
-          onFiltersChange({ ...filters, paidBy: e.target.value })
-        }
-        className={selectClass}
-      >
-        <option value="">Any payer</option>
-        {paidByList.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+          <select
+            aria-label="Dibayar oleh"
+            value={filters.paidBy}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, paidBy: e.target.value })
+            }
+            className={selectClass}
+          >
+            <option value="">Semua pembayar</option>
+            {paidByList.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
 
-      <input
-        type="date"
-        value={filters.dateFrom}
-        onChange={(e) =>
-          onFiltersChange({ ...filters, dateFrom: e.target.value })
-        }
-        className={dateClass}
-        placeholder="From"
-      />
+          <input
+            type="date"
+            aria-label="Dari tanggal"
+            value={filters.dateFrom}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, dateFrom: e.target.value })
+            }
+            className={dateClass}
+            placeholder="From"
+          />
 
-      <input
-        type="date"
-        value={filters.dateTo}
-        onChange={(e) =>
-          onFiltersChange({ ...filters, dateTo: e.target.value })
-        }
-        className={dateClass}
-        placeholder="To"
-      />
-
+          <input
+            type="date"
+            aria-label="Sampai tanggal"
+            value={filters.dateTo}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, dateTo: e.target.value })
+            }
+            className={dateClass}
+            placeholder="To"
+          />
+        </div>
+      </details>
       {hasActiveFilters && (
         <button
           onClick={handleClear}
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-black/10 px-3 text-sm text-black/60 transition-colors hover:border-black/20 hover:text-black"
         >
           <X className="h-3.5 w-3.5" />
-          Clear
+          Reset filter
         </button>
       )}
     </div>
