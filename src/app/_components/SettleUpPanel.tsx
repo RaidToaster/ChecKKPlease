@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
+import { useToast } from "~/components/ui/toast";
 import { PEOPLE } from "~/server/db/schema";
 
 const money = (amount: number) =>
@@ -28,16 +29,19 @@ function SettlementRow({
 }) {
   const [confirming, setConfirming] = useState(false);
   const utils = api.useUtils();
+  const { toast } = useToast();
   const pair = { personA: personA as Person, personB: personB as Person };
   const preview = api.debt.getSettlementPreview.useQuery(pair, {
     enabled: confirming,
   });
   const mutation = api.debt.settleBetween.useMutation({
     onSuccess: async () => {
+      toast("Pelunasan tersimpan. Item kedua arah sudah ditandai lunas.");
       await utils.debt.invalidate();
       setConfirming(false);
     },
     onError: () => {
+      void utils.debt.getNetBalances.invalidate();
       void preview.refetch();
     },
   });
@@ -95,8 +99,8 @@ function SettlementRow({
                   {preview.data.total === 0
                     ? "Kedua utang saling menutup. Selesaikan tanpa transfer?"
                     : `Pastikan ${preview.data.from} sudah membayar ${money(preview.data.total)} ke ${preview.data.to}.`}{" "}
-                  Semua item belum lunas antara kedua orang ini akan ditandai
-                  selesai.
+                  {preview.data.items.length} item belum lunas antara kedua
+                  orang ini akan ditandai selesai setelah konfirmasi.
                 </p>
                 <details className="text-sm">
                   <summary className="cursor-pointer">Lihat rincian</summary>
@@ -152,19 +156,99 @@ function SettlementRow({
 }
 
 export function SettleUpPanel() {
+  const [person, setPerson] = useState("");
+  const [counterparty, setCounterparty] = useState("");
   const balances = api.debt.getNetBalances.useQuery();
+  const pairs = (balances.data ?? []).filter(
+    (pair) => pair.personA === person || pair.personB === person,
+  );
+  const selectedPair = pairs.find(
+    (pair) => pair.personA === counterparty || pair.personB === counterparty,
+  );
+  const payable = pairs
+    .filter((pair) => pair.from === person)
+    .reduce((sum, pair) => sum + pair.amount, 0);
+  const receivable = pairs
+    .filter((pair) => pair.to === person)
+    .reduce((sum, pair) => sum + pair.amount, 0);
   return (
-    <section aria-labelledby="net-heading" className="mb-10 space-y-4">
+    <section
+      aria-labelledby="net-heading"
+      className="mb-8 space-y-4 rounded-2xl border border-black/10 p-5"
+    >
       <div>
         <h2 id="net-heading" className="text-xl font-semibold">
-          Siapa perlu bayar?
+          Cek & lunasi utang
         </h2>
         <p className="mt-1 text-sm text-black/60">
-          Utang dua arah otomatis dipotong. Cukup bayar selisihnya. Ringkasan
-          mencakup semua transaksi.
+          Pilih orang untuk melihat saldo, lalu pilih pasangan yang ingin
+          diselesaikan. Cukup bayar selisih utang dua arah.
         </p>
       </div>
-      {balances.isLoading ? (
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label
+            htmlFor="settlement-person"
+            className="block text-sm font-medium"
+          >
+            Siapa yang ingin dicek?
+          </label>
+          <select
+            id="settlement-person"
+            value={person}
+            onChange={(e) => {
+              setPerson(e.target.value);
+              setCounterparty("");
+            }}
+            className="h-11 w-full rounded-lg border border-black/15 bg-white px-3"
+          >
+            <option value="">Pilih orang</option>
+            {PEOPLE.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+        {person && (
+          <div className="space-y-2">
+            <label
+              htmlFor="settlement-counterparty"
+              className="block text-sm font-medium"
+            >
+              Transaksi dengan siapa?
+            </label>
+            <select
+              id="settlement-counterparty"
+              value={selectedPair ? counterparty : ""}
+              disabled={
+                balances.isLoading || !!balances.error || pairs.length === 0
+              }
+              onChange={(e) => setCounterparty(e.target.value)}
+              className="h-11 w-full rounded-lg border border-black/15 bg-white px-3 disabled:bg-black/5"
+            >
+              <option value="">Pilih pasangan</option>
+              {pairs.map((pair) => {
+                const other =
+                  pair.personA === person ? pair.personB : pair.personA;
+                return (
+                  <option key={other} value={other}>
+                    {other} ·{" "}
+                    {pair.amount === 0
+                      ? "Impas"
+                      : `${pair.from === person ? "Bayar" : "Terima"} ${money(pair.amount)}`}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+      </div>
+      {!person ? (
+        <p className="text-sm text-black/50">
+          Saldo dan pembayaran akan muncul setelah memilih orang.
+        </p>
+      ) : balances.isLoading ? (
         <p role="status">Memuat saldo…</p>
       ) : balances.error ? (
         <p role="alert">
@@ -173,19 +257,41 @@ export function SettleUpPanel() {
             Coba lagi
           </button>
         </p>
-      ) : balances.data?.length === 0 ? (
-        <p className="rounded-xl bg-black/5 p-5 text-sm">
-          Semua beres. Tidak ada utang yang perlu diselesaikan.
-        </p>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {balances.data?.map((pair) => (
-            <SettlementRow
-              key={JSON.stringify([pair.personA, pair.personB])}
-              {...pair}
-            />
-          ))}
-        </div>
+        <>
+          {pairs.length === 0 ? (
+            <p role="status" className="text-sm text-black/60">
+              Tidak ada utang yang perlu diselesaikan untuk {person}.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-black/60">
+                <span>
+                  Perlu dibayar:{" "}
+                  <strong className="text-black">{money(payable)}</strong>
+                </span>
+                <span>
+                  Akan diterima:{" "}
+                  <strong className="text-black">{money(receivable)}</strong>
+                </span>
+              </div>
+              {selectedPair ? (
+                <SettlementRow
+                  key={JSON.stringify([
+                    selectedPair.personA,
+                    selectedPair.personB,
+                  ])}
+                  {...selectedPair}
+                />
+              ) : (
+                <p role="status" className="text-sm text-black/50">
+                  Pilih pasangan di atas untuk melihat rincian dan mencatat
+                  pelunasan.
+                </p>
+              )}
+            </>
+          )}
+        </>
       )}
     </section>
   );

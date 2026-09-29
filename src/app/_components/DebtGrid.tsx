@@ -8,6 +8,7 @@ import { DebtCard } from "./DebtCard";
 import { DebtDetailPanel } from "./DebtDetailPanel";
 import { DebtFilters, type DebtFiltersState } from "./DebtFilters";
 import { SettleUpPanel } from "./SettleUpPanel";
+import { ShowSummaryPanel } from "./ShowSummaryPanel";
 
 const defaultFilters: DebtFiltersState = {
   search: "",
@@ -24,6 +25,7 @@ function useInvalidateDebts() {
   const invalidate = useCallback(
     (debtId?: string) => {
       void utils.debt.getNetBalances.invalidate();
+      void utils.debt.getDebtSummary.invalidate();
       void utils.debt.getSettlementPreview.invalidate();
       void utils.debt.getAllDebts.invalidate();
       void utils.debt.getAllOwners.invalidate();
@@ -42,6 +44,7 @@ export function DebtGrid() {
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
   const [panelMode, setPanelMode] = useState<"detail" | "create">("detail");
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isSummaryPanelOpen, setIsSummaryPanelOpen] = useState(false);
   const [filters, setFilters] = useState<DebtFiltersState>(defaultFilters);
 
   const { data: owners = [] } = api.debt.getAllOwners.useQuery();
@@ -120,6 +123,22 @@ export function DebtGrid() {
       {!isPanelOpen && (
         <>
           <SettleUpPanel />
+          <div className="mb-8">
+            <Button
+              variant="outline"
+              aria-expanded={isSummaryPanelOpen}
+              aria-controls="person-summary"
+              onClick={() => setIsSummaryPanelOpen((open) => !open)}
+            >
+              {isSummaryPanelOpen
+                ? "Tutup ringkasan per orang"
+                : "Ringkasan per orang / Salin total"}
+            </Button>
+            <ShowSummaryPanel
+              isOpen={isSummaryPanelOpen}
+              onClose={() => setIsSummaryPanelOpen(false)}
+            />
+          </div>
           <h2 className="mb-4 text-xl font-semibold">Riwayat transaksi</h2>
           <DebtFilters
             filters={filters}

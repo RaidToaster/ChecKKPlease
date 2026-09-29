@@ -1,6 +1,16 @@
 import { z } from "zod";
 
-export const PEOPLE = ["KK", "LO", "PP", "KA", "YK", "MS", "GT", "VJ"] as const;
+export const PEOPLE = [
+  "KK",
+  "LO",
+  "PP",
+  "KA",
+  "YK",
+  "MS",
+  "GT",
+  "VJ",
+  "XY",
+] as const;
 
 export const PeopleEnum = z.enum(PEOPLE);
 

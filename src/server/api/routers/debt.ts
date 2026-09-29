@@ -22,6 +22,7 @@ const GetAllDebtsInput = z.object({
 });
 
 const UpdateDebtInput = z.object({
+  expectedVersion: z.number().int().nonnegative(),
   _id: z.string().min(1),
   title: z.string().min(1),
   paidBy: PeopleEnum,
@@ -29,7 +30,7 @@ const UpdateDebtInput = z.object({
 });
 
 function mapDebt(doc: DebtDoc) {
-  return { ...doc, _id: doc._id.toHexString() };
+  return { ...doc, version: doc.version ?? 0, _id: doc._id.toHexString() };
 }
 
 const PairInput = z.object({ personA: PeopleEnum, personB: PeopleEnum });
@@ -76,7 +77,11 @@ export const debtRouter = createTRPCRouter({
       const { _id, ...data } = input;
       const found = await ctx.debtRepository.update(_id, data);
       if (!found) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            "Transaksi sudah berubah atau dihapus. Kembali ke rincian lalu buka ulang edit sebelum menyimpan.",
+        });
       }
     }),
 
@@ -116,6 +121,17 @@ export const debtRouter = createTRPCRouter({
     .query(({ ctx, input }) =>
       ctx.debtRepository.getSettlementPreview(input.personA, input.personB),
     ),
+
+  getDebtSummary: protectedProcedure
+    .input(
+      z.object({
+        person: PeopleEnum,
+        direction: z.enum(["owed_to_you", "you_owe"]).default("owed_to_you"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.debtRepository.getDebtSummary(input.person, input.direction);
+    }),
 
   settleBetween: protectedProcedure
     .input(

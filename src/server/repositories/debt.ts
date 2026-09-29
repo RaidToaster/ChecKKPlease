@@ -28,6 +28,7 @@ export interface CreateDebtData {
 }
 
 export interface UpdateDebtData {
+  expectedVersion: number;
   title: string;
   paidBy: string;
   items: Array<{
@@ -65,6 +66,10 @@ export interface DebtRepository {
     personA: string,
     personB: string,
   ): Promise<SettlementPreview>;
+  getDebtSummary(
+    person: string,
+    direction: DebtSummaryDirection,
+  ): Promise<DebtSummary>;
   getAllOwners(): Promise<string[]>;
   getAllPaidBy(): Promise<string[]>;
 }
@@ -129,6 +134,28 @@ export interface SettlementItem {
   name: string;
   price: number;
   debtTitle: string;
+}
+
+export type DebtSummaryDirection = "owed_to_you" | "you_owe";
+
+export interface DebtSummaryItem {
+  name: string;
+  price: number;
+  debtTitle: string;
+  date: Date;
+}
+
+export interface DebtSummaryByPerson {
+  person: string;
+  items: DebtSummaryItem[];
+  total: number;
+}
+
+export interface DebtSummary {
+  person: string;
+  direction: DebtSummaryDirection;
+  parties: DebtSummaryByPerson[];
+  grandTotal: number;
 }
 
 const COLLECTION = "debts";
@@ -237,8 +264,14 @@ export class MongoDebtRepository implements DebtRepository {
 
   async update(id: string, data: UpdateDebtData): Promise<boolean> {
     const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
-      { _id: new ObjectId(id) },
       {
+        _id: new ObjectId(id),
+        ...(data.expectedVersion === 0
+          ? { $or: [{ version: 0 }, { version: { $exists: false } }] }
+          : { version: data.expectedVersion }),
+      },
+      {
+        $inc: { version: 1 },
         $set: {
           title: data.title,
           paidBy: data.paidBy,
@@ -261,22 +294,24 @@ export class MongoDebtRepository implements DebtRepository {
   }
 
   async markItemPaid(debtId: string, itemId: string): Promise<boolean> {
-    const result = await this.db
-      .collection<DebtDoc>(COLLECTION)
-      .updateOne(
-        { _id: new ObjectId(debtId), "items._id": itemId },
-        { $set: { "items.$.paid": true, updatedAt: new Date() } },
-      );
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
+      { _id: new ObjectId(debtId), "items._id": itemId },
+      {
+        $inc: { version: 1 },
+        $set: { "items.$.paid": true, updatedAt: new Date() },
+      },
+    );
     return result.matchedCount > 0;
   }
 
   async markItemUnpaid(debtId: string, itemId: string): Promise<boolean> {
-    const result = await this.db
-      .collection<DebtDoc>(COLLECTION)
-      .updateOne(
-        { _id: new ObjectId(debtId), "items._id": itemId },
-        { $set: { "items.$.paid": false, updatedAt: new Date() } },
-      );
+    const result = await this.db.collection<DebtDoc>(COLLECTION).updateOne(
+      { _id: new ObjectId(debtId), "items._id": itemId },
+      {
+        $inc: { version: 1 },
+        $set: { "items.$.paid": false, updatedAt: new Date() },
+      },
+    );
     return result.matchedCount > 0;
   }
 
@@ -307,7 +342,10 @@ export class MongoDebtRepository implements DebtRepository {
             continue;
           const result = await collection.updateOne(
             { _id: debt._id },
-            { $set: { "items.$[item].paid": true, updatedAt: new Date() } },
+            {
+              $inc: { version: 1 },
+              $set: { "items.$[item].paid": true, updatedAt: new Date() },
+            },
             {
               session,
               arrayFilters: [{ "item.owner": owner, "item.paid": false }],
@@ -331,6 +369,59 @@ export class MongoDebtRepository implements DebtRepository {
       .find({ paidBy: { $in: [personA, personB] } })
       .toArray();
     return previewFor(debts, personA, personB);
+  }
+
+  async getDebtSummary(
+    person: string,
+    direction: DebtSummaryDirection,
+  ): Promise<DebtSummary> {
+    const debts = await this.db
+      .collection<DebtDoc>(COLLECTION)
+      .find({ $or: [{ paidBy: person }, { "items.owner": person }] })
+      .toArray();
+    const parties: DebtSummaryByPerson[] = getNetBalances(debts)
+      .filter(
+        (pair) =>
+          pair.amount > 0 &&
+          (direction === "owed_to_you"
+            ? pair.to === person
+            : pair.from === person),
+      )
+      .map((pair) => {
+        const other = pair.from === person ? pair.to : pair.from;
+        const items: DebtSummaryItem[] = debts
+          .flatMap((debt) =>
+            debt.items
+              .filter(
+                (item) =>
+                  !item.paid &&
+                  ((debt.paidBy === person && item.owner === other) ||
+                    (debt.paidBy === other && item.owner === person)),
+              )
+              .map((item) => ({
+                name: item.name,
+                price: (
+                  direction === "owed_to_you"
+                    ? debt.paidBy === person
+                    : item.owner === person
+                )
+                  ? item.price
+                  : -item.price,
+                debtTitle: debt.title,
+                date: debt.createdAt,
+              })),
+          )
+          .sort((a, b) => a.date.getTime() - b.date.getTime());
+        return { person: other, items, total: pair.amount };
+      })
+      .sort((a, b) => a.person.localeCompare(b.person));
+
+    return {
+      person,
+      direction,
+      parties,
+      grandTotal: parties.reduce((s, d) => s + d.total, 0),
+    };
   }
 
   async getAllOwners(): Promise<string[]> {

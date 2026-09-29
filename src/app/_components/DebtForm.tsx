@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,6 +43,7 @@ type DebtFormValues = z.infer<typeof DebtFormSchema>;
 
 interface DebtFormProps {
   initialValues?: {
+    version: number;
     _id: string;
     title: string;
     paidBy: string;
@@ -64,6 +66,8 @@ export function DebtForm({
 }: DebtFormProps) {
   const { toast } = useToast();
   const isEdit = !!initialValues;
+  const [editVersion] = useState(initialValues?.version ?? 0);
+  const utils = api.useUtils();
 
   const defaultValues: DebtFormValues = initialValues
     ? {
@@ -109,6 +113,9 @@ export function DebtForm({
     onSuccess,
     onError: (error) => {
       toast(error.message, "destructive");
+      if (error.data?.code === "CONFLICT" && initialValues) {
+        void utils.debt.getDebtById.invalidate({ _id: initialValues._id });
+      }
     },
   });
 
@@ -118,6 +125,7 @@ export function DebtForm({
     if (isEdit && initialValues) {
       updateMutation.mutate({
         _id: initialValues._id,
+        expectedVersion: editVersion,
         title: data.title,
         paidBy: data.paidBy as (typeof PEOPLE)[number],
         items: data.items.map((item) => ({

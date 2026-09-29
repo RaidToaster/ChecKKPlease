@@ -47,3 +47,11 @@ ulang sebelum dikonfirmasi.
 Jalankan `npm test` (memerlukan Bun dan Node) untuk pengujian perhitungan dan
 repository dengan adapter dalam memori. Pengujian ini tidak menghubungi database
 nyata. Jalankan `npm run typecheck` untuk pemeriksaan TypeScript.
+
+Alur pelunasan: pilih orang (termasuk XY), lalu pilih pasangan. Hanya satu pasangan
+muncul pada satu waktu. Tombol Catat pelunasan membuka konfirmasi; perubahan status
+item baru disimpan setelah konfirmasi. Semua item belum selesai kedua arah pada
+snapshot tersebut ditandai lunas bersama, sementara item pihak lain tetap utuh.
+Edit transaksi menggunakan pemeriksaan versi agar form yang dibuka sebelum
+pelunasan tidak dapat menimpa status lunas. Jika ditolak karena transaksi berubah,
+kembali ke rincian dan buka ulang edit untuk memuat data terbaru.
