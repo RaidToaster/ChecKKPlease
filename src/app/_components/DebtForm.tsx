@@ -11,6 +11,7 @@ import { Label } from "~/components/ui/label";
 import { useToast } from "~/components/ui/toast";
 import { api } from "~/trpc/react";
 import { PEOPLE } from "~/server/db/schema";
+import { SearchableSelect } from "~/components/ui/searchable-select";
 
 const personValidation = z
   .string()
@@ -40,6 +41,8 @@ const DebtFormSchema = z.object({
 });
 
 type DebtFormValues = z.infer<typeof DebtFormSchema>;
+
+const peopleOptions = PEOPLE.map((value) => ({ value, label: value }));
 
 interface DebtFormProps {
   initialValues?: {
@@ -92,6 +95,9 @@ export function DebtForm({
     control,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
+    reset,
   } = useForm<DebtFormValues>({
     resolver: zodResolver(DebtFormSchema),
     defaultValues,
@@ -103,7 +109,10 @@ export function DebtForm({
   });
 
   const createMutation = api.debt.createDebt.useMutation({
-    onSuccess,
+    onSuccess: () => {
+      reset(defaultValues);
+      onSuccess();
+    },
     onError: (error) => {
       toast(error.message, "destructive");
     },
@@ -168,19 +177,24 @@ export function DebtForm({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Dibayar oleh</Label>
-        <select
-          aria-label="Dibayar oleh"
-          {...register("paidBy")}
-          className="h-11 rounded-lg border border-black/10 px-3"
-        >
-          <option value="">Pilih pembayar</option>
-          {PEOPLE.map((person) => (
-            <option key={person} value={person}>
-              {person}
-            </option>
-          ))}
-        </select>
+        <Label htmlFor="debt-paid-by">Dibayar oleh</Label>
+        <SearchableSelect
+          id="debt-paid-by"
+          name="paidBy"
+          value={watch("paidBy")}
+          options={peopleOptions}
+          onValueChange={(value) =>
+            setValue("paidBy", value, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+          placeholder="Pilih pembayar"
+          searchPlaceholder="Cari pembayar…"
+          ariaLabel="Dibayar oleh"
+          required
+        />
         {errors.paidBy && (
           <span className="text-xs text-red-600">{errors.paidBy.message}</span>
         )}
@@ -213,18 +227,23 @@ export function DebtForm({
               />
             </div>
             <div className="flex items-center gap-2">
-              <select
-                aria-label={`Pemilik item ${index + 1}`}
-                {...register(`items.${index}.owner`)}
-                className="h-10 min-w-0 flex-1 rounded-lg border border-black/10 px-3 text-sm"
-              >
-                <option value="">Pilih pemilik</option>
-                {PEOPLE.map((person) => (
-                  <option key={person} value={person}>
-                    {person}
-                  </option>
-                ))}
-              </select>
+              <SearchableSelect
+                name={`items.${index}.owner`}
+                value={watch(`items.${index}.owner`)}
+                options={peopleOptions}
+                onValueChange={(value) =>
+                  setValue(`items.${index}.owner`, value, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Pilih pemilik"
+                searchPlaceholder="Cari pemilik…"
+                ariaLabel={`Pemilik item ${index + 1}`}
+                className="min-w-0 flex-1"
+                required
+              />
               {errors.items?.[index]?.owner?.message && (
                 <span className="text-xs text-red-600">
                   {errors.items[index]?.owner?.message}

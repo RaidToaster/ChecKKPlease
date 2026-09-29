@@ -6,6 +6,7 @@ import { Check, ClipboardCopy } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useToast } from "~/components/ui/toast";
 import { PEOPLE } from "~/server/db/schema";
+import { SearchableSelect } from "~/components/ui/searchable-select";
 import { api } from "~/trpc/react";
 
 interface ShowSummaryPanelProps {
@@ -14,6 +15,7 @@ interface ShowSummaryPanelProps {
 }
 
 type SummaryDirection = "owed_to_you" | "you_owe";
+const peopleOptions = PEOPLE.map((value) => ({ value, label: value }));
 
 const formatCurrency = (n: number) => {
   return new Intl.NumberFormat("id-ID", {
@@ -101,9 +103,9 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
         amount: "text-green-700",
       }
     : {
-        heading: "text-amber-700",
-        card: "border-amber-200 bg-amber-50/50",
-        amount: "text-amber-700",
+        heading: "text-red-800",
+        card: "border-red-200 bg-red-50/50",
+        amount: "text-red-800",
       };
 
   return (
@@ -130,22 +132,17 @@ export function ShowSummaryPanel({ isOpen, onClose }: ShowSummaryPanelProps) {
             <label className="text-sm font-medium text-black">
               Who are you? / Siapa kamu?
             </label>
-            <select
-              aria-label="Pilih orang"
+            <SearchableSelect
               value={person}
-              onChange={(e) => {
-                setPerson(e.target.value);
+              onValueChange={(value) => {
+                setPerson(value);
                 setCopied(false);
               }}
-              className="h-11 rounded-lg border border-black/10 px-4 text-base"
-            >
-              <option value="">Pilih orang</option>
-              {PEOPLE.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+              options={peopleOptions}
+              placeholder="Pilih orang"
+              searchPlaceholder="Ketik nama orang…"
+              ariaLabel="Pilih orang untuk ringkasan"
+            />
             {person && !personValid && (
               <span className="text-xs text-red-600">
                 Must be one of: {PEOPLE.join(", ")}

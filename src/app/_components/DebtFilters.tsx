@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { SearchableSelect } from "~/components/ui/searchable-select";
 import { Search, X } from "lucide-react";
 import { useDebounce } from "./useDebounce";
 
@@ -62,6 +63,29 @@ export function DebtFilters({
   const selectClass =
     "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-black outline-none font-[family-name:var(--font-sans)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+  const statusOptions = useMemo(
+    () => [
+      { value: "all", label: "Semua" },
+      { value: "pending", label: "Belum lunas" },
+      { value: "settled", label: "Selesai" },
+    ],
+    [],
+  );
+  const ownerOptions = useMemo(
+    () => [
+      { value: "", label: "Semua pemilik" },
+      ...owners.map((value) => ({ value, label: value })),
+    ],
+    [owners],
+  );
+  const paidByOptions = useMemo(
+    () => [
+      { value: "", label: "Semua pembayar" },
+      ...paidByList.map((value) => ({ value, label: value })),
+    ],
+    [paidByList],
+  );
+
   const dateClass =
     "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-black outline-none font-[family-name:var(--font-sans)] [color-scheme:light] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
@@ -79,21 +103,20 @@ export function DebtFilters({
         />
       </div>
 
-      <select
-        aria-label="Status transaksi"
+      <SearchableSelect
         value={filters.status}
-        onChange={(e) =>
+        onValueChange={(status) =>
           onFiltersChange({
             ...filters,
-            status: e.target.value as DebtFiltersState["status"],
+            status: status as DebtFiltersState["status"],
           })
         }
-        className={selectClass}
-      >
-        <option value="all">Semua</option>
-        <option value="pending">Belum lunas</option>
-        <option value="settled">Selesai</option>
-      </select>
+        options={statusOptions}
+        placeholder="Status"
+        searchPlaceholder="Cari status…"
+        ariaLabel="Status transaksi"
+        className="w-36"
+      />
 
       <details className="w-full">
         <summary className="cursor-pointer text-sm text-black/60">
@@ -103,38 +126,24 @@ export function DebtFilters({
             : ""}
         </summary>
         <div className="mt-3 flex flex-wrap gap-3">
-          <select
-            aria-label="Pemilik utang"
+          <SearchableSelect
             value={filters.owner}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, owner: e.target.value })
-            }
-            className={selectClass}
-          >
-            <option value="">Semua pemilik</option>
-            {owners.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-
-          <select
-            aria-label="Dibayar oleh"
+            onValueChange={(owner) => onFiltersChange({ ...filters, owner })}
+            options={ownerOptions}
+            placeholder="Semua pemilik"
+            searchPlaceholder="Cari pemilik…"
+            ariaLabel="Pemilik utang"
+            className="min-w-40"
+          />
+          <SearchableSelect
             value={filters.paidBy}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, paidBy: e.target.value })
-            }
-            className={selectClass}
-          >
-            <option value="">Semua pembayar</option>
-            {paidByList.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-
+            onValueChange={(paidBy) => onFiltersChange({ ...filters, paidBy })}
+            options={paidByOptions}
+            placeholder="Semua pembayar"
+            searchPlaceholder="Cari pembayar…"
+            ariaLabel="Dibayar oleh"
+            className="min-w-40"
+          />
           <input
             type="date"
             aria-label="Dari tanggal"
@@ -145,7 +154,6 @@ export function DebtFilters({
             className={dateClass}
             placeholder="From"
           />
-
           <input
             type="date"
             aria-label="Sampai tanggal"
@@ -158,6 +166,7 @@ export function DebtFilters({
           />
         </div>
       </details>
+
       {hasActiveFilters && (
         <button
           onClick={handleClear}

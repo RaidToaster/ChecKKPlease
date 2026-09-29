@@ -37,7 +37,7 @@ membayar B Rp60.000. Bagian pembayar sendiri tidak dihitung sebagai utang.
 Pelunasan dikonfirmasi langsung pada baris ringkasan. Konfirmasi menyelesaikan
 item kedua arah, termasuk saldo impas tanpa transfer. Riwayat tetap menampilkan
 nominal transaksi asli; filter riwayat tidak mengubah ringkasan net debt.
-Tambah/edit transaksi tampil di halaman tanpa popup.
+Detail, tambah, edit, dan hapus transaksi tersedia melalui panel samping.
 
 Pelunasan memakai MongoDB transaction: gunakan replica set atau MongoDB Atlas.
 Tidak diperlukan migrasi. Data lama tidak otomatis ditandai lunas. Pembayaran
@@ -48,8 +48,9 @@ Jalankan `npm test` (memerlukan Bun dan Node) untuk pengujian perhitungan dan
 repository dengan adapter dalam memori. Pengujian ini tidak menghubungi database
 nyata. Jalankan `npm run typecheck` untuk pemeriksaan TypeScript.
 
-Alur pelunasan: pilih orang (termasuk XY), lalu pilih pasangan. Hanya satu pasangan
-muncul pada satu waktu. Tombol Catat pelunasan membuka konfirmasi; perubahan status
+Alur pelunasan: pilih orang (termasuk XY), lalu seluruh pasangan utangnya langsung
+muncul. Merah berarti perlu membayar, hijau berarti akan menerima, dan abu-abu
+berarti impas, dari sudut pandang orang yang dipilih. Tombol Catat pelunasan membuka konfirmasi; perubahan status
 item baru disimpan setelah konfirmasi. Semua item belum selesai kedua arah pada
 snapshot tersebut ditandai lunas bersama, sementara item pihak lain tetap utuh.
 Edit transaksi menggunakan pemeriksaan versi agar form yang dibuka sebelum
